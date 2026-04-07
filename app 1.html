@@ -1,0 +1,2217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AmbuCheck</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AmbuCheck">
+<meta name="theme-color" content="#E02020">
+
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AmbuCheck">
+<meta name="theme-color" content="#E02020">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script type="module">
+// ═══════════════════════════════════════════
+//  FIREBASE CONFIG
+// ═══════════════════════════════════════════
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, where, orderBy, limit, onSnapshot, deleteDoc, updateDoc, serverTimestamp }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB6keVo_-b9ZpVj_sQ5R6_e6_kAeuWzm3A",
+  authDomain: "ambucheck-47802.firebaseapp.com",
+  projectId: "ambucheck-47802",
+  storageBucket: "ambucheck-47802.firebasestorage.app",
+  messagingSenderId: "784837741808",
+  appId: "1:784837741808:web:9a66b7386c2d03c1a5c635"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// Expor globalmente para o script principal
+window._fbAuth = auth;
+window._fbDb = db;
+window._fbFns = {
+  signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut,
+  onAuthStateChanged, doc, getDoc, setDoc, collection, getDocs,
+  query, where, orderBy, limit, onSnapshot, deleteDoc, updateDoc, serverTimestamp
+};
+window._fbReady = true;
+window.dispatchEvent(new Event('firebase-ready'));
+console.log('✅ Firebase carregado');
+</script>
+<style>
+:root{
+  --red:#E02020;--red2:#B01010;--red3:#FF4040;
+  --dark:#080A0F;--dark2:#0F1219;--dark3:#161B26;--dark4:#1E2536;
+  --border:#232B3E;--text:#F0F2F8;--muted:#8892A4;--muted2:#50596A;
+  --green:#22C55E;--green2:#15803D;--yellow:#F5A623;
+  --blue:#2563EB;--purple:#7C3AED;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--dark);color:var(--text);min-height:100vh}
+.page{display:none}.page.active{display:block}
+
+/* AUTH */
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--dark);background-image:radial-gradient(ellipse 60% 50% at 50% 30%,rgba(224,32,32,0.08),transparent)}
+.auth-card{background:var(--dark2);border:1px solid var(--border);border-radius:20px;width:90%;max-width:440px;padding:40px;box-shadow:0 24px 64px rgba(0,0,0,0.5)}
+.auth-logo{display:flex;align-items:center;gap:10px;margin-bottom:32px;justify-content:center}
+.auth-logo-icon{width:42px;height:42px;background:var(--red);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem}
+.auth-logo-name{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800}
+.auth-tabs{display:flex;background:var(--dark3);border-radius:10px;padding:4px;margin-bottom:28px}
+.auth-tab{flex:1;padding:9px;text-align:center;font-size:0.87rem;font-weight:600;cursor:pointer;border-radius:7px;color:var(--muted);transition:all 0.2s}
+.auth-tab.active{background:var(--red);color:white}
+.af{margin-bottom:14px}
+.af label{display:block;font-size:0.69rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.af input,.af select{width:100%;background:var(--dark3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.9rem;padding:11px 13px;outline:none;transition:border-color 0.2s}
+.af input:focus,.af select:focus{border-color:var(--red)}
+.af input::placeholder{color:var(--muted2)}
+.af select option{background:var(--dark3)}
+.auth-btn{width:100%;padding:13px;background:var(--red);color:white;border:none;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:0.93rem;font-weight:600;cursor:pointer;margin-top:6px;transition:all 0.2s;box-shadow:0 4px 16px rgba(224,32,32,0.25)}
+.auth-btn:hover{background:var(--red3)}
+.auth-btn.sec{background:var(--dark3);color:var(--muted);box-shadow:none;border:1px solid var(--border);margin-top:8px}
+.auth-btn.sec:hover{background:var(--dark4);color:var(--text)}
+.auth-err{background:rgba(224,32,32,0.1);border:1px solid rgba(224,32,32,0.25);border-radius:7px;padding:9px 13px;font-size:0.82rem;color:#FF7070;display:none;margin-bottom:12px}
+.auth-err.show{display:block}
+.auth-form{display:none}.auth-form.active{display:block}
+
+/* LAYOUT */
+.app-wrap{display:flex;min-height:100vh}
+.sidebar{width:232px;background:var(--dark2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:50;overflow-y:auto}
+.sb-brand{padding:18px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px}
+.sb-brand-icon{width:30px;height:30px;background:var(--red);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0}
+.sb-brand-name{font-family:'Syne',sans-serif;font-size:0.95rem;font-weight:800}
+.sb-user{padding:14px 16px;border-bottom:1px solid var(--border)}
+.sb-user-name{font-size:0.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-user-role{font-size:0.7rem;margin-top:3px}
+.sb-user-co{font-size:0.7rem;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rp{display:inline-block;padding:1px 8px;border-radius:4px;font-size:0.68rem;font-weight:700}
+.rp-super{background:rgba(124,58,237,0.2);color:#A78BFA}
+.rp-admin{background:rgba(224,32,32,0.15);color:#FF7070}
+.rp-rt{background:rgba(245,166,35,0.15);color:var(--yellow)}
+.rp-func{background:rgba(34,197,94,0.12);color:var(--green)}
+.sb-nav{flex:1;padding:10px;display:flex;flex-direction:column;gap:2px}
+.sb-sep{font-size:0.63rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);padding:12px 8px 4px}
+.sn{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:7px;cursor:pointer;color:var(--muted);font-size:0.85rem;font-weight:500;transition:all 0.15s}
+.sn:hover{background:var(--dark3);color:var(--text)}
+.sn.active{background:rgba(224,32,32,0.1);color:var(--text);border:1px solid rgba(224,32,32,0.12)}
+.sn-icon{font-size:0.95rem;width:18px;text-align:center;flex-shrink:0}
+.sn-badge{background:var(--red);color:white;border-radius:8px;padding:1px 6px;font-size:0.65rem;font-weight:800;margin-left:auto}
+.sn-badge.ye{background:var(--yellow);color:var(--dark)}
+.sb-foot{padding:14px 16px;border-top:1px solid var(--border)}
+.btn-logout{width:100%;background:transparent;border:1px solid var(--border);border-radius:7px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:0.8rem;font-weight:600;padding:8px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-logout:hover{background:rgba(224,32,32,0.06);border-color:rgba(224,32,32,0.2);color:#FF7070}
+.app-main{margin-left:232px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--dark2);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:40}
+.topbar-title{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:800;letter-spacing:-0.5px}
+.topbar-co{background:rgba(37,99,235,0.12);border:1px solid rgba(37,99,235,0.2);border-radius:6px;padding:3px 11px;font-size:0.73rem;font-weight:700;color:var(--blue)}
+.content{padding:24px 28px;max-width:980px;width:100%}
+.panel{display:none}.panel.active{display:block}
+
+/* CARDS */
+.card{background:var(--dark2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.ch{background:var(--dark3);padding:12px 18px;display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--border)}
+.ch-icon{width:26px;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:800;color:white;flex-shrink:0}
+.ch-title{font-family:'Syne',sans-serif;font-size:0.9rem;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;flex:1}
+.ch-btn{background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:0.78rem;font-weight:600;padding:5px 12px;cursor:pointer;transition:all 0.15s}
+.ch-btn:hover{background:var(--dark4);color:var(--text)}
+.cb{padding:16px 18px;display:flex;flex-direction:column;gap:13px}
+
+/* FIELDS */
+.fl{font-size:0.68rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.fl .req{color:var(--red)}
+.fi{width:100%;background:#0A0C12;border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.87rem;padding:9px 12px;outline:none;transition:border-color 0.2s}
+.fi:focus{border-color:var(--red)}.fi::placeholder{color:var(--muted2)}.fi:disabled{opacity:0.5}
+.fi option{background:#0A0C12}
+.fta{width:100%;background:#0A0C12;border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.87rem;padding:9px 12px;outline:none;transition:border-color 0.2s;resize:vertical;min-height:68px}
+.fta:focus{border-color:var(--red)}.fta::placeholder{color:var(--muted2)}
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.r3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+
+/* RADIO */
+.rg{display:flex;flex-wrap:wrap;gap:7px}
+.rb{cursor:pointer}.rb input{display:none}
+.rb span{display:inline-block;padding:6px 13px;border-radius:6px;font-size:0.8rem;font-weight:600;border:1px solid var(--border);background:#0A0C12;color:var(--muted);transition:all 0.15s}
+.rb input:checked+span{background:var(--red);border-color:var(--red);color:white}
+.rb.bl input:checked+span{background:var(--blue);border-color:var(--blue)}
+.rb.gr input:checked+span{background:var(--green2);border-color:var(--green)}
+.rb.ye input:checked+span{background:#92400E;border-color:var(--yellow);color:var(--yellow)}
+
+/* GRID TABLE */
+.gt{border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.gh{display:grid;background:#10162A;padding:8px 13px;font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.gr-r{display:grid;padding:9px 13px;border-top:1px solid #131825;align-items:center}
+.gr-r:hover{background:#0F1320}
+.gr-r .rl{font-size:0.83rem;color:#CDD5E0}
+.gra{cursor:pointer}.gra input{display:none}
+.gra span{display:inline-block;padding:3px 9px;border-radius:4px;font-size:0.72rem;font-weight:600;border:1px solid var(--border);background:#0A0C12;color:var(--muted);cursor:pointer;transition:all 0.15s}
+.gra.ok input:checked+span{background:var(--green2);border-color:var(--green);color:white}
+.gra.nok input:checked+span{background:var(--red2);border-color:var(--red);color:white}
+.gra.pres input:checked+span{background:var(--green2);border-color:var(--green);color:white}
+.gra.aus input:checked+span{background:var(--red2);border-color:var(--red);color:white}
+
+/* FUEL */
+.fg{display:flex;flex-wrap:wrap;gap:6px}
+.fb{cursor:pointer}.fb input{display:none}
+.fb span{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:6px;font-size:0.82rem;font-weight:600;border:1px solid var(--border);background:#0A0C12;color:var(--muted);transition:all 0.15s}
+.fb input:checked+span{background:#0F2A1A;border-color:var(--green);color:var(--green)}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.stat{background:var(--dark2);border:1px solid var(--border);border-radius:12px;padding:16px;position:relative;overflow:hidden}
+.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.stat.red::before{background:var(--red)}.stat.blue::before{background:var(--blue)}
+.stat.green::before{background:var(--green)}.stat.yellow::before{background:var(--yellow)}
+.stat.purple::before{background:var(--purple)}
+.stat-val{font-family:'Syne',sans-serif;font-size:1.9rem;font-weight:800;line-height:1;margin-bottom:3px}
+.stat-label{font-size:0.75rem;color:var(--muted)}
+.stat-icon{position:absolute;right:14px;top:14px;font-size:1.5rem;opacity:0.25}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:0.8rem}
+thead tr{background:var(--dark3)}
+thead th{padding:9px 13px;text-align:left;font-size:0.66rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr{border-bottom:1px solid #131825;transition:background 0.15s}
+tbody tr:hover{background:#0F1320}
+tbody tr:last-child{border-bottom:none}
+tbody td{padding:8px 13px;color:#CDD5E0;vertical-align:middle}
+.empty{text-align:center;padding:32px;color:var(--muted2);font-size:0.85rem}
+
+/* BADGES */
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;white-space:nowrap}
+.b-ok{background:rgba(34,197,94,0.12);color:var(--green);border:1px solid rgba(34,197,94,0.2)}
+.b-nok{background:rgba(224,32,32,0.12);color:#FF7070;border:1px solid rgba(224,32,32,0.2)}
+.b-info{background:rgba(37,99,235,0.12);color:var(--blue);border:1px solid rgba(37,99,235,0.2)}
+.b-ye{background:rgba(245,166,35,0.12);color:var(--yellow);border:1px solid rgba(245,166,35,0.2)}
+.b-pu{background:rgba(124,58,237,0.12);color:#A78BFA;border:1px solid rgba(124,58,237,0.2)}
+.b-gray{background:rgba(136,146,164,0.1);color:var(--muted);border:1px solid rgba(136,146,164,0.15)}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:600;cursor:pointer;border:none;transition:all 0.2s}
+.btn.red{background:var(--red);color:white}.btn.red:hover{background:var(--red3)}
+.btn.blue{background:var(--blue);color:white}.btn.blue:hover{background:#1D4ED8}
+.btn.green{background:var(--green2);color:white}.btn.green:hover{background:#16A34A}
+.btn.purple{background:var(--purple);color:white}.btn.purple:hover{background:#6D28D9}
+.btn.ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}.btn.ghost:hover{background:var(--dark3);color:var(--text)}
+.btn.danger{background:rgba(224,32,32,0.1);color:#FF7070;border:1px solid rgba(224,32,32,0.2)}.btn.danger:hover{background:var(--red);color:white}
+.btn.sm{padding:5px 11px;font-size:0.75rem}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;justify-content:center}
+
+/* PROGRESS */
+.pbar-row{display:flex;align-items:center;gap:10px;background:var(--dark3);border:1px solid var(--border);border-radius:8px;padding:9px 16px;margin-bottom:12px}
+.pbar-label{font-size:0.72rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.pbar{flex:1;height:5px;background:#1E2536;border-radius:3px;overflow:hidden}
+.pfill{height:100%;background:linear-gradient(90deg,var(--green2),var(--green));border-radius:3px;transition:width 0.4s;width:0%}
+.pcnt{font-size:0.85rem;font-weight:700;color:var(--green);white-space:nowrap}
+.sbar{display:flex;gap:16px;align-items:center;flex-wrap:wrap;background:var(--dark3);border:1px solid var(--border);border-radius:8px;padding:9px 16px;margin-bottom:12px}
+.si{display:flex;align-items:center;gap:5px;font-size:0.75rem;font-weight:600}
+.dot{width:7px;height:7px;border-radius:50%}
+.dot-ok{background:var(--green)}.dot-nok{background:var(--red3)}.dot-pend{background:var(--yellow)}
+
+/* ALERTS */
+.alert{border-radius:8px;padding:10px 14px;font-size:0.82rem;display:flex;align-items:flex-start;gap:8px;margin-bottom:12px}
+.alert.red{background:rgba(224,32,32,0.08);border:1px solid rgba(224,32,32,0.2);color:#FF7070}
+.alert.yellow{background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.2);color:var(--yellow)}
+.alert.green{background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:var(--green)}
+.alert.blue{background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.2);color:var(--blue)}
+
+/* APPROVAL CARD */
+.aprv-card{background:var(--dark3);border:1px solid rgba(245,166,35,0.25);border-radius:10px;padding:14px 16px;margin-bottom:10px}
+.aprv-meta{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.aprv-name{font-weight:600;font-size:0.88rem}
+.aprv-desc{font-size:0.83rem;color:var(--muted);margin-bottom:10px;line-height:1.5}
+
+/* STOCK */
+.stock-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.stk{background:var(--dark3);border:1px solid var(--border);border-radius:10px;padding:13px;position:relative}
+.stk.low{border-color:rgba(224,32,32,0.35);background:rgba(224,32,32,0.03)}
+.stk-name{font-weight:600;font-size:0.83rem;margin-bottom:2px}
+.stk-cat{font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:7px}
+.stk-qty{display:flex;align-items:center;gap:6px;margin-top:5px}
+.qty-btn{width:24px;height:24px;border-radius:5px;border:1px solid var(--border);background:#0A0C12;color:white;font-size:0.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.qty-btn:hover{background:var(--dark4)}
+.qty-val{font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:800;min-width:28px;text-align:center}
+.qty-unit{font-size:0.7rem;color:var(--muted)}
+.stk-min{font-size:0.65rem;color:var(--muted2);margin-top:3px}
+.low-b{position:absolute;top:7px;right:7px;background:var(--red);color:white;border-radius:3px;padding:1px 5px;font-size:0.6rem;font-weight:800}
+
+/* SEC TITLE */
+.sec-t{font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);padding:10px 0 5px;border-top:1px solid var(--border);margin-top:2px}
+.sec-t:first-child{border-top:none;padding-top:0}
+
+/* MODAL */
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:300;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.modal-ov.show{display:flex}
+.modal-box{background:var(--dark3);border:1px solid var(--border);border-radius:16px;padding:28px;width:90%;max-width:460px;animation:popIn 0.22s cubic-bezier(.175,.885,.32,1.275);max-height:90vh;overflow-y:auto}
+@keyframes popIn{from{transform:scale(0.87);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-box h3{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;margin-bottom:18px}
+.modal-foot{display:flex;gap:8px;margin-top:18px}
+.modal-foot .btn{flex:1;justify-content:center}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--dark3);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:0.85rem;font-weight:500;box-shadow:0 8px 28px rgba(0,0,0,0.5);z-index:500;display:none;align-items:center;gap:9px;max-width:320px}
+.toast.show{display:flex;animation:slideIn 0.22s ease}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+@media(max-width:768px){
+  /* Sidebar escondida — navega por bottom nav */
+  .sidebar{transform:translateX(-100%);transition:transform 0.25s ease;z-index:100}
+  .sidebar.mob-open{transform:translateX(0)}
+  .mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99}
+  .mob-overlay.show{display:block}
+  .app-main{margin-left:0!important;padding-bottom:70px}
+  /* Topbar mobile */
+  .topbar{padding:10px 14px;display:flex;align-items:center;gap:10px}
+  .topbar-title{font-size:1rem;font-weight:700;flex:1}
+  .mob-menu-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;background:var(--dark3);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:1.1rem;flex-shrink:0}
+  /* Bottom navigation */
+  .bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--dark2);border-top:1px solid var(--border);z-index:50;height:60px}
+  .bn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--muted);font-size:0.6rem;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;padding:6px 2px;border:none;background:none;transition:color 0.15s}
+  .bn-item.active{color:var(--red)}
+  .bn-item .bn-icon{font-size:1.3rem;line-height:1}
+  /* Grids */
+  .stats{grid-template-columns:1fr 1fr}
+  .r2,.r3{grid-template-columns:1fr}
+  .content{padding:12px}
+  /* Cards */
+  .card{border-radius:10px}
+  /* Tabela responsiva */
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{min-width:500px}
+  /* Auth card mobile */
+  .auth-card{padding:24px 20px;margin:16px}
+  /* Checklist grid */
+  .gr-r{grid-template-columns:1fr 70px 70px!important;font-size:0.82rem}
+  .gh{grid-template-columns:1fr 70px 70px!important}
+  .gra span{font-size:0.72rem}
+  /* Stats cards */
+  .stat-val{font-size:1.4rem}
+  /* Modais */
+  .modal-box{width:95vw;max-height:90vh;overflow-y:auto;margin:5vh auto}
+}
+@media(min-width:769px){
+  .bottom-nav{display:none}
+  .mob-menu-btn{display:none}
+  .mob-overlay{display:none!important}
+}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div class="page active" id="page-auth">
+<div class="auth-wrap"><div class="auth-card">
+  <div class="auth-logo">
+    <div class="auth-logo-icon">🚑</div>
+    <span class="auth-logo-name">AmbuCheck</span>
+  </div>
+  <div class="auth-tabs">
+    <div class="auth-tab active" onclick="authTab('login',this)">Entrar</div>
+    <div class="auth-tab" onclick="authTab('register',this)">Criar conta</div>
+  </div>
+  <div class="auth-form active" id="af-login">
+    <div class="auth-err" id="login-err">E-mail ou senha incorretos.</div>
+    <div class="af"><label>E-mail</label><input type="email" id="l-email" placeholder="seu@email.com"></div>
+    <div class="af"><label>Senha</label><input type="password" id="l-senha" placeholder="Sua senha"></div>
+    <button class="auth-btn" onclick="doLogin()">Entrar →</button>
+    <button class="auth-btn sec" onclick="demoLogin()">🎯 Entrar com conta demo</button>
+  </div>
+  <div class="auth-form" id="af-register">
+    <div class="auth-err" id="reg-err"></div>
+    <div class="af"><label>Nome completo *</label><input type="text" id="r-nome" placeholder="Seu nome"></div>
+    <div class="af"><label>E-mail *</label><input type="email" id="r-email" placeholder="email@empresa.com.br"></div>
+    <div class="af"><label>Empresa / Instituição *</label><input type="text" id="r-empresa" placeholder="Ex: SAMU Regional..."></div>
+    <div class="af"><label>Senha *</label><input type="password" id="r-senha" placeholder="Mínimo 6 caracteres"></div>
+    <div class="af"><label>Plano</label>
+      <select id="r-plano">
+        <option value="Básico">Básico — R$ 49/mês (até 2 ambulâncias)</option>
+        <option value="Padrão" selected>Padrão — R$ 129/mês (até 6 ambulâncias)</option>
+        <option value="Premium">Premium — R$ 249/mês (ilimitado)</option>
+      </select>
+    </div>
+    <button class="auth-btn" onclick="doRegister()">Criar empresa →</button>
+  </div>
+</div></div>
+</div>
+
+<!-- APP -->
+<div class="page" id="page-app">
+<div class="app-wrap">
+
+<div class="sidebar" id="sidebar">
+  <div class="sb-brand"><div class="sb-brand-icon">🚑</div><span class="sb-brand-name">AmbuCheck</span></div>
+  <div class="sb-user">
+    <div class="sb-user-name" id="sb-nome">—</div>
+    <div class="sb-user-role" id="sb-role"></div>
+    <div class="sb-user-co" id="sb-co">—</div>
+  </div>
+  <div class="sb-nav" id="sb-nav"></div>
+  <div class="sb-foot"><button class="btn-logout" onclick="doLogout()">🚪 Sair</button></div>
+</div>
+
+<div class="app-main">
+  <div class="topbar">
+    <span class="topbar-title" id="topbar-title">Dashboard</span>
+    <span class="topbar-co" id="topbar-co">—</span>
+  </div>
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div class="panel active" id="panel-dashboard">
+      <div class="stats" id="dash-stats"></div>
+      <div class="card">
+        <div class="ch"><div class="ch-icon" style="background:var(--red)">📋</div><div class="ch-title">Últimos Checklists</div></div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Data/Hora</th><th>Ambulância</th><th>Condutor</th><th>Turno</th><th>Status</th></tr></thead>
+          <tbody id="dash-chk-tb"></tbody>
+        </table></div>
+      </div>
+      <div id="dash-alerts-card"></div>
+    </div>
+
+    <!-- CHECKLIST -->
+    <div class="panel" id="panel-checklist">
+      <div class="sbar">
+        <div class="si"><div class="dot dot-ok"></div><span id="st-ok">0 OK</span></div>
+        <div class="si"><div class="dot dot-nok"></div><span id="st-nok">0 Problema</span></div>
+        <div class="si"><div class="dot dot-pend"></div><span id="st-pend">0 Pendentes</span></div>
+      </div>
+      <div class="pbar-row"><span class="pbar-label">Progresso</span><div class="pbar"><div class="pfill" id="pfill"></div></div><span class="pcnt" id="pcnt">0/0</span></div>
+
+      <div class="card">
+        <div class="ch"><div class="ch-icon" style="background:var(--red)">1</div><div class="ch-title">Identificação</div></div>
+        <div class="cb">
+          <div class="r2">
+            <div><div class="fl">KM Início do Turno <span class="req">*</span></div><input class="fi t" type="number" id="hodometro" placeholder="Ex: 45740"></div>
+            <div><div class="fl">KM Fim do Turno</div><input class="fi t" type="number" id="km_fim" placeholder="Preencher ao final"></div>
+            <div><div class="fl">Condutor <span class="req">*</span></div><input class="fi t" type="text" id="condutor" placeholder="Nome completo"></div>
+            <div><div class="fl">Data</div><input class="fi t" type="date" id="data-v"></div>
+            <div><div class="fl">Horário</div><input class="fi t" type="time" id="horario"></div>
+            <div><div class="fl">Temp. Interna (°C)</div><input class="fi t" type="number" step="0.1" id="temp_int" placeholder="Ex: 22.5"></div>
+            <div><div class="fl">Temp. Externa (°C)</div><input class="fi t" type="number" step="0.1" id="temp_ext" placeholder="Ex: 18.0"></div>
+          </div>
+          <div><div class="fl">Ambulância <span class="req">*</span></div><div class="rg" id="amb-radios"></div></div>
+          <div><div class="fl">Turno <span class="req">*</span></div>
+            <div class="rg">
+              <label class="rb"><input type="radio" name="turno" value="07:00 MANHA" onchange="upd()"><span>🌅 07h Manhã</span></label>
+              <label class="rb"><input type="radio" name="turno" value="13:00 TARDE" onchange="upd()"><span>☀️ 13h Tarde</span></label>
+              <label class="rb"><input type="radio" name="turno" value="19:00 NOITE" onchange="upd()"><span>🌙 19h Noite</span></label>
+              <label class="rb"><input type="radio" name="turno" value="PLANTAO M/T" onchange="upd()"><span>🔄 M/T</span></label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ch"><div class="ch-icon" style="background:var(--red)">2</div><div class="ch-title">⛽ Combustível</div></div>
+        <div class="cb"><div class="fg">
+          <label class="fb"><input type="radio" name="combustivel" value="COMPLETO" onchange="upd()"><span>🟢 Completo</span></label>
+          <label class="fb"><input type="radio" name="combustivel" value="3/4" onchange="upd()"><span>🔵 3/4</span></label>
+          <label class="fb"><input type="radio" name="combustivel" value="MEIO" onchange="upd()"><span>🟡 Meio</span></label>
+          <label class="fb"><input type="radio" name="combustivel" value="1/3" onchange="upd()"><span>🟠 1/3</span></label>
+          <label class="fb"><input type="radio" name="combustivel" value="1/4" onchange="upd()"><span>🔴 1/4</span></label>
+          <label class="fb"><input type="radio" name="combustivel" value="RESERVA" onchange="upd()"><span>⚠️ Reserva</span></label>
+        </div></div>
+      </div>
+
+      <div class="card">
+        <div class="ch"><div class="ch-icon" style="background:var(--red)">3</div><div class="ch-title">🔧 Motor</div></div>
+        <div class="cb"><div class="gt">
+          <div class="gh" style="grid-template-columns:1fr 90px 90px"><span>Item</span><span>Normal</span><span>Baixo</span></div>
+          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Água (arrefecimento)</span><label class="gra ok"><input type="radio" name="m_agua" value="NORMAL" onchange="upd()"><span>Normal</span></label><label class="gra nok"><input type="radio" name="m_agua" value="BAIXO" onchange="upd()"><span>Baixo</span></label></div>
+          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Óleo do motor</span><label class="gra ok"><input type="radio" name="m_oleo" value="NORMAL" onchange="upd()"><span>Normal</span></label><label class="gra nok"><input type="radio" name="m_oleo" value="BAIXO" onchange="upd()"><span>Baixo</span></label></div>
+          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Fluido de freios</span><label class="gra ok"><input type="radio" name="m_freios" value="NORMAL" onchange="upd()"><span>Normal</span></label><label class="gra nok"><input type="radio" name="m_freios" value="BAIXO" onchange="upd()"><span>Baixo</span></label></div>
+          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Fluido D. Hidráulica</span><label class="gra ok"><input type="radio" name="m_hidraulica" value="NORMAL" onchange="upd()"><span>Normal</span></label><label class="gra nok"><input type="radio" name="m_hidraulica" value="BAIXO" onchange="upd()"><span>Baixo</span></label></div>
+          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Func. Geral do Motor</span><label class="gra ok"><input type="radio" name="m_motor_geral" value="NORMAL" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="m_motor_geral" value="BAIXO" onchange="upd()"><span>Falha</span></label></div>
+          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Ar-condicionado Cabine</span><label class="gra ok"><input type="radio" name="m_ac_cabine" value="NORMAL" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="m_ac_cabine" value="BAIXO" onchange="upd()"><span>Falha</span></label></div>
+          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Ar-condicionado Salão</span><label class="gra ok"><input type="radio" name="m_ac_salao" value="NORMAL" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="m_ac_salao" value="BAIXO" onchange="upd()"><span>Falha</span></label></div>
+        </div></div>
+      </div>
+
+      <div class="card">
+        <div class="ch"><div class="ch-icon" style="background:var(--red)">4</div><div class="ch-title">💡 Sistema Elétrico</div></div>
+        <div class="cb"><div class="gt">
+          <div class="gh" style="grid-template-columns:1fr 90px 90px"><span>Item</span><span>Presente</span><span>Ausente</span></div>
+          <div id="el-rows"></div>
+        </div></div>
+      </div>
+
+      <div class="card">
+        <div class="ch"><div class="ch-icon" style="background:var(--red)">5</div><div class="ch-title">🫁 Oxigênios</div></div>
+        <div class="cb"><div class="r3">
+          <div><div class="fl">Cilindro 01 <span class="req">*</span></div><input class="fi t" type="text" id="cil01" placeholder="Ex: 150 kgf"></div>
+          <div><div class="fl">Cilindro 02</div><input class="fi t" type="text" id="cil02" placeholder="Ex: 80 kgf"></div>
+          <div><div class="fl">Cilindro Pequeno</div><input class="fi t" type="text" id="cil03" placeholder="Ex: 200 kgf"></div>
+        </div></div>
+      </div>
+
+      <div class="card" id="extra-card">
+        <div class="ch"><div class="ch-icon" style="background:var(--green2)">✚</div><div class="ch-title">Itens Adicionais Aprovados</div></div>
+        <div class="cb" id="extra-body"><span style="color:var(--muted);font-size:0.83rem">Nenhum item adicional aprovado ainda.</span></div>
+      </div>
+
+      <div class="card">
+        <div class="ch"><div class="ch-icon" style="background:var(--red)">6</div><div class="ch-title">⚙️ Pneus, Limpeza & Intercorrências</div></div>
+        <div class="cb">
+          <div class="sec-t">Quilometragem das Saídas</div>
+          <div id="km-saidas-list" style="display:flex;flex-direction:column;gap:8px"></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input class="fi" type="number" id="km-saida-input" placeholder="KM da saída" style="flex:1">
+            <input class="fi" type="time" id="km-saida-hora" style="width:110px">
+            <input class="fi" type="text" id="km-saida-obs" placeholder="Obs (opcional)" style="flex:1">
+            <button class="btn ghost" onclick="addKmSaida()" style="white-space:nowrap">+ Saída</button>
+          </div>
+
+          <div><div class="fl">Pneus calibrados?</div>
+            <div class="rg"><label class="rb"><input type="radio" name="pneus" value="SIM" onchange="upd()"><span>✔ Sim</span></label><label class="rb"><input type="radio" name="pneus" value="NAO" onchange="upd()"><span>✘ Não</span></label></div>
+          </div>
+          <div class="r2">
+            <div><div class="fl">Limpeza Interna</div><div class="rg"><label class="rb"><input type="radio" name="limp_int" value="LIMPA" onchange="upd()"><span>✔ Limpa</span></label><label class="rb"><input type="radio" name="limp_int" value="NAO_LIMPA" onchange="upd()"><span>✘ Não Limpa</span></label></div></div>
+            <div><div class="fl">Limpeza Externa</div><div class="rg"><label class="rb"><input type="radio" name="limp_ext" value="LIMPA" onchange="upd()"><span>✔ Limpa</span></label><label class="rb"><input type="radio" name="limp_ext" value="NAO_LIMPA" onchange="upd()"><span>✘ Não Limpa</span></label></div></div>
+          </div>
+          <div><div class="fl">Intercorrências</div><textarea class="fta" id="intercorrencias" placeholder="Descreva intercorrências..."></textarea></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="ch-icon" style="background:var(--red)">7</div><div class="ch-title">🔩 Acessórios em Geral</div></div>
+        <div class="cb"><div class="gt">
+          <div class="gh" style="grid-template-columns:1fr 90px 90px"><span>Item</span><span>OK</span><span>Falha/Ausente</span></div>
+          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Lente Retrovisor Direito</span><label class="gra ok"><input type="radio" name="ac_retro_d" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_retro_d" value="AUSENTE" onchange="upd()"><span>Falha</span></label></div>
+          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Lente Retrovisor Esquerdo</span><label class="gra ok"><input type="radio" name="ac_retro_e" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_retro_e" value="AUSENTE" onchange="upd()"><span>Falha</span></label></div>
+          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Estepe</span><label class="gra ok"><input type="radio" name="ac_estepe" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_estepe" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
+          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Chave de Roda</span><label class="gra ok"><input type="radio" name="ac_chave_roda" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_chave_roda" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
+          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Triângulo</span><label class="gra ok"><input type="radio" name="ac_triangulo" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_triangulo" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
+          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Macaco</span><label class="gra ok"><input type="radio" name="ac_macaco" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_macaco" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
+          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Bancos (Danos)</span><label class="gra ok"><input type="radio" name="ac_bancos" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_bancos" value="AUSENTE" onchange="upd()"><span>Com Dano</span></label></div>
+          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Tapetes</span><label class="gra ok"><input type="radio" name="ac_tapetes" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_tapetes" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
+          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Documentos do Veículo</span><label class="gra ok"><input type="radio" name="ac_docs" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_docs" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
+          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Rádio Base</span><label class="gra ok"><input type="radio" name="ac_radio" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_radio" value="AUSENTE" onchange="upd()"><span>Falha</span></label></div>
+          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Extintor Cabine Geral</span><label class="gra ok"><input type="radio" name="ac_extintor_g" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_extintor_g" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
+          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Extintor Cabine Motorista</span><label class="gra ok"><input type="radio" name="ac_extintor_m" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_extintor_m" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
+        </div></div>
+      </div>
+
+      <div class="btn-row"><button class="btn red" onclick="submitChecklist()">✓ Finalizar Checklist</button></div>
+    </div>
+
+    <!-- SUGERIR -->
+    <div class="panel" id="panel-sugerir">
+      <div class="alert yellow">💡 Sugestões precisam ser aprovadas pelo RT antes de aparecerem no checklist ou estoque.</div>
+      <div class="card">
+        <div class="ch"><div class="ch-icon" style="background:#92400E">+</div><div class="ch-title">Sugerir Novo Item</div></div>
+        <div class="cb">
+          <div class="r2">
+            <div><div class="fl">Nome do Item *</div><input class="fi" type="text" id="sug-nome" placeholder="Ex: Desfibrilador..."></div>
+            <div><div class="fl">Categoria *</div>
+              <select class="fi" id="sug-cat"><option value="">Selecione...</option><option>Medicamento</option><option>Material</option><option>Equipamento</option><option>Via Aérea</option><option>Checklist Mecânico</option><option>Outro</option></select>
+            </div>
+          </div>
+          <div><div class="fl">Tipo</div>
+            <div class="rg">
+              <label class="rb ye"><input type="radio" name="sug_tipo" value="checklist"><span>📋 Checklist</span></label>
+              <label class="rb ye"><input type="radio" name="sug_tipo" value="estoque"><span>📦 Estoque</span></label>
+              <label class="rb ye"><input type="radio" name="sug_tipo" value="ambos"><span>🔄 Ambos</span></label>
+            </div>
+          </div>
+          <div><div class="fl">Justificativa *</div><textarea class="fta" id="sug-just" placeholder="Por que este item deve ser adicionado?"></textarea></div>
+        </div>
+      </div>
+      <div class="btn-row"><button class="btn" style="background:#92400E;color:var(--yellow)" onclick="submitSugestao()">📤 Enviar para RT</button></div>
+      <div class="card">
+        <div class="ch"><div class="ch-icon" style="background:#92400E">📋</div><div class="ch-title">Minhas Sugestões</div></div>
+        <div class="tbl-wrap"><table><thead><tr><th>Item</th><th>Categoria</th><th>Tipo</th><th>Enviado em</th><th>Status</th><th>Obs. RT</th></tr></thead><tbody id="sug-tbody"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- APROVAÇÕES -->
+    <div class="panel" id="panel-aprovacoes">
+      <div class="alert yellow">⚠️ Itens aprovados aparecem automaticamente no checklist e/ou estoque da empresa.</div>
+      <div class="card">
+        <div class="ch"><div class="ch-icon" style="background:#92400E">⏳</div><div class="ch-title">Sugestões Pendentes</div></div>
+        <div class="cb" id="aprv-pending"><span style="color:var(--muted);font-size:0.83rem">Nenhuma sugestão pendente ✅</span></div>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="ch-icon" style="background:var(--green2)">✔</div><div class="ch-title">Histórico</div></div>
+        <div class="tbl-wrap"><table><thead><tr><th>Item</th><th>Sugerido por</th><th>Decisão</th><th>Data</th><th>Obs. RT</th></tr></thead><tbody id="aprv-hist-tb"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ALTERAÇÕES -->
+    <div class="panel" id="panel-alteracoes">
+      <div class="card">
+        <div class="ch"><div class="ch-icon" style="background:var(--blue)">+</div><div class="ch-title">Registrar Alteração</div></div>
+        <div class="cb">
+          <div class="r2">
+            <div><div class="fl">Ambulância *</div><div class="rg" id="alt-amb-r"></div></div>
+            <div><div class="fl">Data *</div><input class="fi" type="date" id="alt-data"></div>
+          </div>
+          <div><div class="fl">Tipo *</div>
+            <div class="rg">
+              <label class="rb bl"><input type="radio" name="alt_tipo" value="Mecânica"><span>🔧 Mecânica</span></label>
+              <label class="rb bl"><input type="radio" name="alt_tipo" value="Elétrica"><span>⚡ Elétrica</span></label>
+              <label class="rb bl"><input type="radio" name="alt_tipo" value="Equip. Médico"><span>🏥 Médico</span></label>
+              <label class="rb bl"><input type="radio" name="alt_tipo" value="Carroceria"><span>🚑 Carroceria</span></label>
+              <label class="rb bl"><input type="radio" name="alt_tipo" value="Acidente"><span>💥 Acidente</span></label>
+            </div>
+          </div>
+          <div class="r2">
+            <div><div class="fl">Gravidade</div><div class="rg"><label class="rb gr"><input type="radio" name="alt_grav" value="Leve"><span>🟢 Leve</span></label><label class="rb"><input type="radio" name="alt_grav" value="Moderada"><span>🟡 Moderada</span></label><label class="rb"><input type="radio" name="alt_grav" value="Grave"><span>🔴 Grave</span></label></div></div>
+            <div><div class="fl">Status</div><div class="rg"><label class="rb"><input type="radio" name="alt_status" value="Pendente" checked><span>⏳ Pendente</span></label><label class="rb"><input type="radio" name="alt_status" value="Em Andamento"><span>🔄 Andamento</span></label><label class="rb gr"><input type="radio" name="alt_status" value="Resolvido"><span>✔ Resolvido</span></label></div></div>
+          </div>
+          <div><div class="fl">Descrição *</div><textarea class="fta" id="alt-desc" placeholder="Descreva detalhadamente..."></textarea></div>
+          <div class="r2">
+            <div><div class="fl">Responsável *</div><input class="fi" type="text" id="alt-resp" placeholder="Nome"></div>
+            <div><div class="fl">Custo (R$)</div><input class="fi" type="number" id="alt-custo" placeholder="0,00"></div>
+          </div>
+        </div>
+      </div>
+      <div class="btn-row"><button class="btn blue" onclick="submitAlt()">+ Registrar Alteração</button></div>
+      <div class="card">
+        <div class="ch"><div class="ch-icon" style="background:var(--blue)">📋</div><div class="ch-title">Histórico de Alterações</div></div>
+        <div class="tbl-wrap"><table><thead><tr><th>Data</th><th>Ambulância</th><th>Tipo</th><th>Gravidade</th><th>Descrição</th><th>Responsável</th><th>Status</th><th>Custo</th></tr></thead><tbody id="alt-tbody"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ESTOQUE -->
+    <div class="panel" id="panel-estoque">
+      <div id="low-alert" style="display:none" class="alert red">⚠️ <span id="low-txt"></span></div>
+      <div class="card">
+        <div class="ch"><div class="ch-icon" style="background:var(--purple)">💊</div><div class="ch-title">Estoque de Medicamentos e Materiais</div></div>
+        <div class="cb"><div class="stock-grid" id="stock-grid"></div></div>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="ch-icon" style="background:var(--purple)">📝</div><div class="ch-title">Registrar Uso</div></div>
+        <div class="cb">
+          <div class="r2">
+            <div><div class="fl">Ambulância</div><div class="rg" id="uso-amb-r"></div></div>
+            <div><div class="fl">Data/Hora</div><input class="fi" type="datetime-local" id="uso-dt"></div>
+          </div>
+          <div class="r3">
+            <div><div class="fl">Item *</div><input class="fi" type="text" id="uso-item" list="items-dl" placeholder="Selecione..."><datalist id="items-dl"></datalist></div>
+            <div><div class="fl">Quantidade *</div><input class="fi" type="number" id="uso-qtd" placeholder="1" min="1"></div>
+            <div><div class="fl">Paciente / Ocorrência</div><input class="fi" type="text" id="uso-pac" placeholder="Identificação"></div>
+          </div>
+          <div><div class="fl">Responsável</div><input class="fi" type="text" id="uso-resp" placeholder="Nome"></div>
+          <div><div class="fl">Obs.</div><textarea class="fta" id="uso-obs" placeholder="Informações adicionais..."></textarea></div>
+        </div>
+      </div>
+      <div class="btn-row"><button class="btn purple" onclick="submitUso()">+ Registrar Uso</button></div>
+      <div class="card">
+        <div class="ch"><div class="ch-icon" style="background:var(--purple)">📋</div><div class="ch-title">Histórico de Uso</div></div>
+        <div class="tbl-wrap"><table><thead><tr><th>Data/Hora</th><th>Ambulância</th><th>Item</th><th>Qtd</th><th>Paciente</th><th>Responsável</th></tr></thead><tbody id="uso-tbody"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- USUÁRIOS -->
+    <div class="panel" id="panel-usuarios">
+      <div class="card">
+        <div class="ch"><div class="ch-icon" style="background:var(--blue)">👥</div><div class="ch-title">Usuários da Empresa</div><button class="ch-btn" onclick="openModal('modal-user')">+ Adicionar</button></div>
+        <div class="tbl-wrap"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Função</th><th>Cadastrado em</th><th>Ações</th></tr></thead><tbody id="users-tbody"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- AMBULÂNCIAS -->
+    <div class="panel" id="panel-ambulancias">
+      <div class="card">
+        <div class="ch"><div class="ch-icon" style="background:var(--red)">🚑</div><div class="ch-title">Ambulâncias Cadastradas</div><button class="ch-btn" onclick="openModalAmb()">+ Cadastrar</button></div>
+        <div class="tbl-wrap"><table><thead><tr><th>Prefixo</th><th>Placa</th><th>Modelo</th><th>Ano</th><th>RT</th><th>Status</th><th>Ações</th></tr></thead><tbody id="ambs-tbody"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- CONFIG -->
+    <div class="panel" id="panel-config">
+      <div class="card">
+        <div class="ch"><div class="ch-icon" style="background:var(--green2)">⚙️</div><div class="ch-title">Configurações da Empresa</div></div>
+        <div class="cb">
+          <div class="r2">
+            <div><div class="fl">Nome da empresa</div><input class="fi" type="text" id="cfg-empresa" placeholder="Nome"></div>
+            <div><div class="fl">Plano atual</div><input class="fi" type="text" id="cfg-plano" disabled></div>
+          </div>
+          <div><div class="fl">RT Principal da Empresa</div><select class="fi" id="cfg-rt"><option value="">Selecione o RT...</option></select></div>
+          <div><div class="fl">URL Google Apps Script (Drive)</div>
+            <div style="display:flex;gap:8px">
+              <input class="fi" type="text" id="cfg-gas" placeholder="https://script.google.com/macros/s/.../exec" style="flex:1">
+              <button class="btn ghost" onclick="salvarGAS()">Salvar URL</button>
+            </div>
+          </div>
+          <div class="btn-row" style="justify-content:flex-start"><button class="btn green" onclick="salvarConfig()">💾 Salvar</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUPER ADMIN -->
+    <div class="panel" id="panel-superadmin">
+      <div class="alert blue">🛡️ Área restrita — Super Administrador AmbuCheck</div>
+      <div class="stats" id="super-stats"></div>
+      <div class="card">
+        <div class="ch"><div class="ch-icon" style="background:var(--purple)">🏢</div><div class="ch-title">Empresas Cadastradas</div></div>
+        <div class="tbl-wrap"><table><thead><tr><th>Empresa</th><th>Admin</th><th>Plano</th><th>Usuários</th><th>Ambulâncias</th><th>Checklists</th><th>Cadastro</th></tr></thead><tbody id="super-tb"></tbody></table></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+</div>
+
+<!-- MODAL USUÁRIO -->
+<div class="modal-ov" id="modal-user">
+<div class="modal-box">
+  <h3>Adicionar Usuário</h3>
+  <div class="af"><label>Nome completo *</label><input type="text" id="nu-nome" placeholder="Nome"></div>
+  <div class="af"><label>E-mail *</label><input type="email" id="nu-email" placeholder="email@empresa.com.br"></div>
+  <div class="af"><label>Senha provisória *</label><input type="password" id="nu-senha" placeholder="Mínimo 6 caracteres"></div>
+  <div class="af"><label>Função *</label>
+    <select id="nu-func">
+      <option value="Administrador">Administrador</option>
+      <option value="RT">RT — Responsável Técnico</option>
+      <option value="Condutor" selected>Condutor</option>
+      <option value="Técnico">Técnico / Socorrista</option>
+    </select>
+  </div>
+  <div class="modal-foot">
+    <button class="btn green" onclick="addUser()">Adicionar</button>
+    <button class="btn ghost" onclick="closeModal('modal-user')">Cancelar</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL AMBULÂNCIA -->
+<div class="modal-ov" id="modal-amb">
+<div class="modal-box">
+  <h3>Cadastrar Ambulância</h3>
+  <div class="r2" style="margin-bottom:12px">
+    <div class="af"><label>Prefixo *</label><input type="text" id="ma-pref" placeholder="Ex: SA-01"></div>
+    <div class="af"><label>Placa *</label><input type="text" id="ma-placa" placeholder="Ex: JBV 5I90"></div>
+    <div class="af"><label>Modelo</label><input type="text" id="ma-modelo" placeholder="Ex: Sprinter 2.2"></div>
+    <div class="af"><label>Ano</label><input type="number" id="ma-ano" placeholder="2023"></div>
+  </div>
+  <div class="af"><label>RT Designado</label>
+    <select id="ma-rt"><option value="">Sem RT específico (usa RT da empresa)</option></select>
+  </div>
+  <div class="modal-foot">
+    <button class="btn red" onclick="addAmb()">Cadastrar</button>
+    <button class="btn ghost" onclick="closeModal('modal-amb')">Cancelar</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL RT AMB -->
+<div class="modal-ov" id="modal-set-rt">
+<div class="modal-box">
+  <h3>Definir RT para Ambulância</h3>
+  <div id="set-rt-info" style="color:var(--muted);font-size:0.85rem;margin-bottom:14px"></div>
+  <div class="af"><label>Selecionar RT</label><select id="set-rt-sel"><option value="">Sem RT específico</option></select></div>
+  <div class="modal-foot">
+    <button class="btn blue" onclick="salvarRtAmb()">Salvar</button>
+    <button class="btn ghost" onclick="closeModal('modal-set-rt')">Cancelar</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL APROVAÇÃO -->
+<div class="modal-ov" id="modal-aprv">
+<div class="modal-box">
+  <h3 id="aprv-title">Revisar Sugestão</h3>
+  <div id="aprv-body"></div>
+  <div class="af" style="margin-top:12px"><label>Observação para o funcionário</label><textarea class="fta" id="aprv-obs" placeholder="Explique o motivo..."></textarea></div>
+  <div class="modal-foot">
+    <button class="btn green" onclick="decidir(true)">✔ Aprovar</button>
+    <button class="btn danger" onclick="decidir(false)">✘ Rejeitar</button>
+    <button class="btn ghost" onclick="closeModal('modal-aprv')">Fechar</button>
+  </div>
+</div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><span id="toast-msg">✅ Salvo!</span></div>
+
+<script>
+// ═══════ CONSTANTES ═══════
+const SUPER = {id:'superadmin',nome:'Super Admin',email:'admin@ambulcheck.com.br',senha:'superadmin123',role:'superadmin',empresa:'AmbuCheck'};
+const ROLE_PILL  = {superadmin:'rp-super',Administrador:'rp-admin',RT:'rp-rt',Condutor:'rp-func',Técnico:'rp-func'};
+const ROLE_LABEL = {superadmin:'Super Admin',Administrador:'Admin',RT:'Responsável Técnico',Condutor:'Condutor',Técnico:'Técnico'};
+const DEFAULT_STOCK = [
+  // ── MEDICAMENTOS – Compartimento Interno Geral ──
+  {id:'acs',name:'Ácido Acetilsalicílico 100mg (Blister)',cat:'Medicamento',qty:2,min:1,unit:'bl'},
+  {id:'ac_tranex',name:'Ácido Tranexâmico 250mg',cat:'Medicamento',qty:5,min:5,unit:'amp'},
+  {id:'adenosina',name:'Adenosina 3mg/ml - 2ml',cat:'Medicamento',qty:1,min:1,unit:'amp'},
+  {id:'agua_dest',name:'Água Destilada 10ml',cat:'Medicamento',qty:5,min:5,unit:'amp'},
+  {id:'amiodarona',name:'Amiodarona 50mg/ml - 3ml',cat:'Medicamento',qty:2,min:2,unit:'amp'},
+  {id:'atropina',name:'Atropina 0,25mg/ml - 1ml',cat:'Medicamento',qty:3,min:2,unit:'amp'},
+  {id:'bicarb',name:'Bicarbonato de Sódio 8,4% 10ml',cat:'Medicamento',qty:3,min:2,unit:'amp'},
+  {id:'bromoprida',name:'Bromoprida 5mg/ml',cat:'Medicamento',qty:3,min:1,unit:'amp'},
+  {id:'captopril',name:'Captopril 25mg (Blister)',cat:'Medicamento',qty:2,min:2,unit:'bl'},
+  {id:'clopidogrel',name:'Clopidogrel 75mg (Blister)',cat:'Medicamento',qty:2,min:2,unit:'bl'},
+  {id:'dexametasona',name:'Dexametasona 4mg/ml',cat:'Medicamento',qty:5,min:2,unit:'amp'},
+  {id:'dipirona',name:'Dipirona 500mg/ml - 2ml',cat:'Medicamento',qty:5,min:5,unit:'amp'},
+  {id:'diazepam',name:'Diazepam 5mg/ml',cat:'Medicamento',qty:3,min:2,unit:'amp'},
+  {id:'dobutamina',name:'Dobutamina 250mg - 20ml',cat:'Medicamento',qty:3,min:1,unit:'amp'},
+  {id:'epinefrina',name:'Epinefrina 1mg/ml - 1ml',cat:'Medicamento',qty:20,min:3,unit:'amp'},
+  {id:'escopolamina',name:'Escopolamina 20mg/ml + Dipirona',cat:'Medicamento',qty:5,min:5,unit:'amp'},
+  {id:'furosemida',name:'Furosemida 10mg/ml - 2ml',cat:'Medicamento',qty:5,min:5,unit:'amp'},
+  {id:'glicose50',name:'Glicose 50% 10ml',cat:'Medicamento',qty:4,min:3,unit:'amp'},
+  {id:'gluconato',name:'Gluconato de Cálcio 10%',cat:'Medicamento',qty:3,min:1,unit:'amp'},
+  {id:'hidralazina',name:'Hidralazina 20mg/ml - 1ml',cat:'Medicamento',qty:3,min:1,unit:'amp'},
+  {id:'isordil',name:'Isordil Sublingual 5mg (Blister)',cat:'Medicamento',qty:2,min:1,unit:'bl'},
+  {id:'lidocaina',name:'Lidocaína 5ml',cat:'Medicamento',qty:5,min:2,unit:'amp'},
+  {id:'metoprolol',name:'Metoprolol 1mg/ml - 5ml',cat:'Medicamento',qty:5,min:2,unit:'amp'},
+  {id:'midazolam',name:'Midazolam 5mg/ml - 3ml',cat:'Medicamento',qty:10,min:5,unit:'amp'},
+  {id:'morfina',name:'Morfina 1mg/ml - 2ml',cat:'Medicamento',qty:10,min:5,unit:'amp'},
+  {id:'naloxona',name:'Naloxona 0,4mg/ml',cat:'Medicamento',qty:3,min:1,unit:'amp'},
+  {id:'norepinefrina',name:'Norepinefrina 2mg/ml - 4ml',cat:'Medicamento',qty:5,min:2,unit:'amp'},
+  {id:'plasil',name:'Plasil - Metoclopramida 100mg/2ml',cat:'Medicamento',qty:5,min:2,unit:'amp'},
+  {id:'prometazina',name:'Prometazina 25mg/ml - 2ml',cat:'Medicamento',qty:5,min:2,unit:'amp'},
+  {id:'salbutamol',name:'Salbutamol Spray',cat:'Medicamento',qty:2,min:1,unit:'un'},
+  {id:'sf09',name:'SF 0,9% 500ml',cat:'Medicamento',qty:5,min:3,unit:'frs'},
+  {id:'sulfmag',name:'Sulfato de Magnésio 10% 10ml',cat:'Medicamento',qty:2,min:1,unit:'amp'},
+  {id:'suxametonio',name:'Suxametônio 100mg',cat:'Medicamento',qty:4,min:2,unit:'amp'},
+  {id:'tramadol',name:'Tramadol 50mg/ml - 2ml',cat:'Medicamento',qty:5,min:3,unit:'amp'},
+  {id:'xilocaina_sp',name:'Xilocaína Spray',cat:'Medicamento',qty:2,min:1,unit:'un'},
+  // ── PSICOTRÓPICOS – Bolsa Amarela (c/ lacre) ──
+  {id:'cetamina',name:'Cetamina 50mg/ml',cat:'Psicotrópico',qty:3,min:1,unit:'amp'},
+  {id:'etomidato',name:'Etomidato 2mg/ml',cat:'Psicotrópico',qty:6,min:3,unit:'amp'},
+  {id:'fenobarbital',name:'Fenobarbital 100mg/ml - 2ml',cat:'Psicotrópico',qty:3,min:1,unit:'amp'},
+  {id:'fenitoina',name:'Fenitoína 50mg/ml - 5ml',cat:'Psicotrópico',qty:4,min:2,unit:'amp'},
+  {id:'fentanila',name:'Fentanila',cat:'Psicotrópico',qty:5,min:3,unit:'amp'},
+  {id:'haloperidol',name:'Haloperidol 5mg/ml - 1ml',cat:'Psicotrópico',qty:3,min:1,unit:'amp'},
+  // ── SOLUÇÕES – Compartimento Horizontal Esquerdo ──
+  {id:'nacl100',name:'Cloreto Sódio 0,9% 100ml',cat:'Solução',qty:5,min:5,unit:'frs'},
+  {id:'nacl250',name:'Cloreto Sódio 0,9% 250ml',cat:'Solução',qty:5,min:5,unit:'frs'},
+  {id:'nacl500',name:'Cloreto Sódio 0,9% 500ml',cat:'Solução',qty:3,min:3,unit:'frs'},
+  {id:'glicose5',name:'Glicose 5% 500ml',cat:'Solução',qty:3,min:3,unit:'frs'},
+  {id:'ringer',name:'Ringer Lactato 500ml',cat:'Solução',qty:3,min:3,unit:'frs'},
+  {id:'manitol',name:'Manitol 20% 250ml',cat:'Solução',qty:3,min:1,unit:'frs'},
+  // ── ACESSO VENOSO – Bolsa Acesso Venoso ──
+  {id:'abocat14',name:'Abocath N°14 c/ Disp. Segurança',cat:'Acesso Venoso',qty:5,min:5,unit:'un'},
+  {id:'abocat16',name:'Abocath N°16 c/ Disp. Segurança',cat:'Acesso Venoso',qty:5,min:5,unit:'un'},
+  {id:'abocat18',name:'Abocath N°18 c/ Disp. Segurança',cat:'Acesso Venoso',qty:5,min:5,unit:'un'},
+  {id:'abocat20',name:'Abocath N°20 c/ Disp. Segurança',cat:'Acesso Venoso',qty:5,min:5,unit:'un'},
+  {id:'abocat22',name:'Abocath N°22 c/ Disp. Segurança',cat:'Acesso Venoso',qty:5,min:5,unit:'un'},
+  {id:'abocat24',name:'Abocath N°24 c/ Disp. Segurança',cat:'Acesso Venoso',qty:5,min:5,unit:'un'},
+  {id:'agulha4012',name:'Agulha 40x12 (Rosa)',cat:'Acesso Venoso',qty:20,min:10,unit:'un'},
+  {id:'agulha25x7',name:'Agulha 25x7 (Preta)',cat:'Acesso Venoso',qty:20,min:10,unit:'un'},
+  {id:'agulha30x8',name:'Agulha 30x8 (Verde)',cat:'Acesso Venoso',qty:20,min:10,unit:'un'},
+  {id:'equipo_macro',name:'Equipo Macrogotas',cat:'Acesso Venoso',qty:10,min:5,unit:'un'},
+  {id:'equipo_micro',name:'Equipo Microgotas',cat:'Acesso Venoso',qty:3,min:1,unit:'un'},
+  {id:'polifix',name:'Polifix Adulto - Equipo Multivias 2 Vias Clamp',cat:'Acesso Venoso',qty:10,min:5,unit:'un'},
+  {id:'micropore',name:'Micropore 5x10',cat:'Acesso Venoso',qty:2,min:1,unit:'rl'},
+  {id:'esparadrapo',name:'Esparadrapo 10x4,5',cat:'Acesso Venoso',qty:2,min:1,unit:'rl'},
+  {id:'garrote',name:'Garrote de Fecho',cat:'Acesso Venoso',qty:1,min:1,unit:'un'},
+  {id:'seringa20',name:'Seringa 20ml',cat:'Acesso Venoso',qty:10,min:5,unit:'un'},
+  {id:'seringa10',name:'Seringa 10ml',cat:'Acesso Venoso',qty:10,min:5,unit:'un'},
+  {id:'seringa5',name:'Seringa 5ml',cat:'Acesso Venoso',qty:10,min:5,unit:'un'},
+  {id:'io_adulto',name:'Agulha Intraóssea Adulto BIG',cat:'Acesso Venoso',qty:1,min:1,unit:'un'},
+  {id:'io_ped',name:'Agulha Intraóssea Pediátrica BIG',cat:'Acesso Venoso',qty:1,min:1,unit:'un'},
+  // ── VIA AÉREA – Mochila Verde Médico ──
+  {id:'laringo',name:'Cabo de Laringoscópio Adulto e Infantil',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'pilha_laringo',name:'Pilhas para Laringoscópio',cat:'Via Aérea',qty:2,min:2,unit:'un'},
+  {id:'lamina_c0',name:'Lâmina Curva N°0',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'lamina_c1',name:'Lâmina Curva N°1',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'lamina_c2',name:'Lâmina Curva N°2',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'lamina_c3',name:'Lâmina Curva N°3',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'lamina_c4',name:'Lâmina Curva N°4',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'lamina_c5',name:'Lâmina Curva N°5',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'lamina_r0',name:'Lâmina Reta N°0',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'lamina_r1',name:'Lâmina Reta N°1',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'lamina_r2',name:'Lâmina Reta N°2',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'lamina_r3',name:'Lâmina Reta N°3',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'lamina_r4',name:'Lâmina Reta N°4',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'lamina_r5',name:'Lâmina Reta N°5',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'cadarco',name:'Cadarço/Fixa TOT',cat:'Via Aérea',qty:2,min:1,unit:'un'},
+  {id:'fio_guia_a',name:'Fio Guia Adulto ou Bougie',cat:'Via Aérea',qty:2,min:1,unit:'un'},
+  {id:'fio_guia_p',name:'Fio Guia Pediátrico ou Bougie',cat:'Via Aérea',qty:2,min:1,unit:'un'},
+  {id:'guedel0',name:'Cânula de Guedel N°0',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'guedel1',name:'Cânula de Guedel N°1',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'guedel2',name:'Cânula de Guedel N°2',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'guedel3',name:'Cânula de Guedel N°3',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'guedel4',name:'Cânula de Guedel N°4',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'guedel5',name:'Cânula de Guedel N°5',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'traquestomia55',name:'Cânula Traqueostomia N°5.5',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'traquestomia70',name:'Cânula Traqueostomia N°7.0',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'iot25',name:'Cânula Orotraqueal c/Cuff 2,5',cat:'Via Aérea',qty:2,min:1,unit:'un'},
+  {id:'iot3',name:'Cânula Orotraqueal c/Cuff 3',cat:'Via Aérea',qty:2,min:1,unit:'un'},
+  {id:'iot35',name:'Cânula Orotraqueal c/Cuff 3,5',cat:'Via Aérea',qty:2,min:1,unit:'un'},
+  {id:'iot4',name:'Cânula Orotraqueal c/Cuff 4',cat:'Via Aérea',qty:2,min:1,unit:'un'},
+  {id:'iot45',name:'Cânula Orotraqueal c/Cuff 4,5',cat:'Via Aérea',qty:2,min:1,unit:'un'},
+  {id:'iot5',name:'Cânula Orotraqueal c/Cuff 5',cat:'Via Aérea',qty:2,min:1,unit:'un'},
+  {id:'iot55',name:'Cânula Orotraqueal c/Cuff 5,5',cat:'Via Aérea',qty:2,min:1,unit:'un'},
+  {id:'iot6',name:'Cânula Orotraqueal c/Cuff 6',cat:'Via Aérea',qty:2,min:1,unit:'un'},
+  {id:'iot65',name:'Cânula Orotraqueal c/Cuff 6,5',cat:'Via Aérea',qty:2,min:1,unit:'un'},
+  {id:'iot7',name:'Cânula Orotraqueal c/Cuff 7',cat:'Via Aérea',qty:3,min:1,unit:'un'},
+  {id:'iot75',name:'Cânula Orotraqueal c/Cuff 7,5',cat:'Via Aérea',qty:3,min:1,unit:'un'},
+  {id:'iot8',name:'Cânula Orotraqueal c/Cuff 8',cat:'Via Aérea',qty:3,min:1,unit:'un'},
+  {id:'iot85',name:'Cânula Orotraqueal c/Cuff 8,5',cat:'Via Aérea',qty:3,min:1,unit:'un'},
+  {id:'iot9',name:'Cânula Orotraqueal c/Cuff 9',cat:'Via Aérea',qty:2,min:1,unit:'un'},
+  {id:'iot95',name:'Cânula Orotraqueal c/Cuff 9,5',cat:'Via Aérea',qty:2,min:1,unit:'un'},
+  {id:'ml10',name:'Máscara Laríngea N°1.0',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'ml20',name:'Máscara Laríngea N°2.0',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'ml30',name:'Máscara Laríngea N°3.0',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'ml40',name:'Máscara Laríngea N°4.0',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'ml50',name:'Máscara Laríngea N°5.0',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'xilo_gel',name:'Xilocaína Gel',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'pinca_magill',name:'Pinça Magill',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'ambu',name:'AMBU Adulto',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'ambu_inf',name:'AMBU Infantil',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'ambu_neo',name:'AMBU Neonatal',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'mask_bag_a',name:'Máscara Conc. N/R c/ Bag Adulto',cat:'Via Aérea',qty:2,min:1,unit:'un'},
+  {id:'mask_bag_p',name:'Máscara Conc. N/R c/ Bag Infantil',cat:'Via Aérea',qty:2,min:1,unit:'un'},
+  {id:'oculos_na',name:'Óculos Nasal Adulto',cat:'Via Aérea',qty:3,min:2,unit:'un'},
+  {id:'oculos_np',name:'Óculos Nasal Pediátrico',cat:'Via Aérea',qty:3,min:2,unit:'un'},
+  // ── MATERIAL – Mochila Imob./Multiplas Vítimas ──
+  {id:'atadura10',name:'Atadura 10cm',cat:'Material',qty:20,min:10,unit:'un'},
+  {id:'atadura20',name:'Atadura 20cm',cat:'Material',qty:20,min:10,unit:'un'},
+  {id:'bandagem',name:'Bandagem Triangular',cat:'Material',qty:5,min:3,unit:'un'},
+  {id:'compressa',name:'Compressa Cirúrgica',cat:'Material',qty:30,min:10,unit:'un'},
+  {id:'gaze77',name:'Gaze Estéril 7x7',cat:'Material',qty:30,min:20,unit:'un'},
+  {id:'manta_alum',name:'Manta Aluminizada',cat:'Material',qty:5,min:5,unit:'un'},
+  {id:'prot_evisc',name:'Protetor de Eviscerado',cat:'Material',qty:3,min:1,unit:'un'},
+  {id:'tala_p',name:'Tala Papelão P',cat:'Material',qty:5,min:3,unit:'un'},
+  {id:'tala_m',name:'Tala Papelão M',cat:'Material',qty:5,min:3,unit:'un'},
+  {id:'tesoura',name:'Tesoura Ponta Romba',cat:'Material',qty:1,min:1,unit:'un'},
+  {id:'torniquete',name:'Torniquete',cat:'Material',qty:2,min:1,unit:'un'},
+  {id:'sonda_asp6',name:'Sonda de Aspiração 6',cat:'Material',qty:3,min:3,unit:'un'},
+  {id:'sonda_asp8',name:'Sonda de Aspiração 8',cat:'Material',qty:3,min:3,unit:'un'},
+  {id:'sonda_asp12',name:'Sonda de Aspiração 12',cat:'Material',qty:3,min:3,unit:'un'},
+  {id:'sonda_asp14',name:'Sonda de Aspiração 14',cat:'Material',qty:3,min:1,unit:'un'},
+  {id:'ext_aspiracao',name:'Extensor de Aspiração',cat:'Material',qty:3,min:1,unit:'un'},
+  {id:'aspirador_manual',name:'Aspirador Manual Portátil',cat:'Material',qty:1,min:1,unit:'un'},
+  {id:'yankauer',name:'Sonda Aspiração Rígida Yankauer',cat:'Material',qty:2,min:1,unit:'un'},
+  {id:'sonda_gast12',name:'Sonda Gástrica Longa 12',cat:'Material',qty:2,min:1,unit:'un'},
+  {id:'sonda_gast14',name:'Sonda Gástrica Longa 14',cat:'Material',qty:2,min:1,unit:'un'},
+  {id:'sonda_gast16',name:'Sonda Gástrica Longa 16',cat:'Material',qty:2,min:1,unit:'un'},
+  {id:'sonda_gast18',name:'Sonda Gástrica Longa 18',cat:'Material',qty:2,min:1,unit:'un'},
+  {id:'sonda_gast20',name:'Sonda Gástrica Longa 20',cat:'Material',qty:2,min:1,unit:'un'},
+  {id:'luva_g',name:'Luva de Procedimento G - CX',cat:'Material',qty:1,min:1,unit:'cx'},
+  {id:'luva_m',name:'Luva de Procedimento M - CX',cat:'Material',qty:1,min:1,unit:'cx'},
+  {id:'luva_p',name:'Luva de Procedimento P - CX',cat:'Material',qty:1,min:1,unit:'cx'},
+  {id:'mask_desc',name:'Máscaras Descartáveis CX',cat:'Material',qty:1,min:1,unit:'cx'},
+  {id:'mask_n95',name:'Máscaras N95',cat:'Material',qty:5,min:3,unit:'un'},
+  {id:'luva_esteril65',name:'Luva Estéril 6.5',cat:'Material',qty:3,min:1,unit:'un'},
+  {id:'luva_esteril70',name:'Luva Estéril 7.0',cat:'Material',qty:3,min:3,unit:'un'},
+  {id:'luva_esteril80',name:'Luva Estéril 8.0',cat:'Material',qty:3,min:1,unit:'un'},
+  {id:'kit_sutura',name:'Kit Sutura - Pequenas Cirurgias Descartável',cat:'Material',qty:2,min:1,unit:'un'},
+  {id:'kit_parto',name:'Kit Parto Completo - Maleta',cat:'Material',qty:1,min:1,unit:'un'},
+  {id:'circuito_resp',name:'Circuito Respirador',cat:'Material',qty:2,min:1,unit:'un'},
+  {id:'filtro_bact',name:'Filtro Bacteriológico',cat:'Material',qty:2,min:1,unit:'un'},
+  {id:'kit_dreno_a',name:'Kit Dreno de Tórax Adulto',cat:'Material',qty:1,min:1,unit:'un'},
+  {id:'kit_dreno_p',name:'Kit Dreno de Tórax Ped',cat:'Material',qty:1,min:1,unit:'un'},
+  {id:'ked_a',name:'Dispositivo Extricação KED Adulto',cat:'Material',qty:1,min:1,unit:'un'},
+  {id:'ked_p',name:'Dispositivo Extricação KED Infantil',cat:'Material',qty:1,min:1,unit:'un'},
+  {id:'tala_eva_gg',name:'Tala EVA Tamanho GG',cat:'Material',qty:2,min:1,unit:'un'},
+  {id:'tala_eva_g',name:'Tala EVA Tamanho G',cat:'Material',qty:6,min:3,unit:'un'},
+  {id:'tala_eva_m',name:'Tala EVA Tamanho M',cat:'Material',qty:6,min:3,unit:'un'},
+  {id:'tala_eva_p',name:'Tala EVA Tamanho P',cat:'Material',qty:6,min:3,unit:'un'},
+  {id:'tala_eva_pp',name:'Tala EVA Tamanho PP',cat:'Material',qty:6,min:3,unit:'un'},
+  {id:'tala_papelao_p',name:'Tala Papelão Tamanho P',cat:'Material',qty:10,min:5,unit:'un'},
+  {id:'tala_papelao_m',name:'Tala Papelão Tamanho M',cat:'Material',qty:10,min:5,unit:'un'},
+  {id:'tala_papelao_g',name:'Tala Papelão Tamanho G',cat:'Material',qty:10,min:5,unit:'un'},
+  {id:'imob_cabeca',name:'Kit Imobilizador de Cabeça + Tirantes (Reserva)',cat:'Material',qty:1,min:1,unit:'un'},
+  {id:'bandeira_sin',name:'Bandeira de Sinalização',cat:'Material',qty:2,min:2,unit:'un'},
+  {id:'bastao_lum',name:'Bastão de Sinalização Luminoso',cat:'Material',qty:1,min:1,unit:'un'},
+  {id:'saco_obito',name:'Saco Óbito',cat:'Material',qty:3,min:1,unit:'un'},
+  // ── EQUIPAMENTOS – Bancada Principal ──
+  {id:'cardioversor',name:'Cardioversor/Monitor Multiparâmetro',cat:'Equipamento',qty:1,min:1,unit:'un'},
+  {id:'eletrodos',name:'Eletrodos - Pacote',cat:'Equipamento',qty:1,min:1,unit:'pct'},
+  {id:'gel_desfibril',name:'Gel Condutor Desfibrilador',cat:'Equipamento',qty:2,min:1,unit:'un'},
+  {id:'respirador_mec',name:'Respirador Mecânico',cat:'Equipamento',qty:1,min:1,unit:'un'},
+  {id:'fluxometro',name:'Fluxômetro',cat:'Equipamento',qty:2,min:2,unit:'un'},
+  {id:'frasco_asp',name:'Frasco de Aspiração',cat:'Equipamento',qty:2,min:2,unit:'un'},
+  {id:'frasco_umid',name:'Frasco Umidificador',cat:'Equipamento',qty:2,min:2,unit:'un'},
+  {id:'alcool70_100',name:'Álcool 70% 100ml',cat:'Equipamento',qty:2,min:1,unit:'un'},
+  {id:'agua_ox_100',name:'Água Oxigenada 100ml',cat:'Equipamento',qty:2,min:1,unit:'un'},
+  // ── SINAIS VITAIS – Compartimento Vertical Direito ──
+  {id:'esfig_inf',name:'Esfigmomanômetro Infantil',cat:'Sinais Vitais',qty:1,min:1,unit:'un'},
+  {id:'esfig_adu',name:'Esfigmomanômetro Adulto',cat:'Sinais Vitais',qty:1,min:1,unit:'un'},
+  {id:'estetoscopio',name:'Estetoscópio',cat:'Sinais Vitais',qty:2,min:1,unit:'un'},
+  {id:'termometro',name:'Termômetro Digital',cat:'Sinais Vitais',qty:1,min:1,unit:'un'},
+  {id:'oximetro',name:'Oxímetro de Pulso',cat:'Sinais Vitais',qty:1,min:1,unit:'un'},
+  {id:'abaixador',name:'Abaixador de Língua - Pacote',cat:'Sinais Vitais',qty:1,min:1,unit:'pct'},
+  {id:'glicosimetro',name:'Glicosímetro',cat:'Sinais Vitais',qty:1,min:1,unit:'un'},
+  {id:'fitas_glico',name:'Fitas de Glicosímetro',cat:'Sinais Vitais',qty:50,min:10,unit:'un'},
+  {id:'lancetas',name:'Lancetas',cat:'Sinais Vitais',qty:30,min:10,unit:'un'},
+  {id:'corta_anel',name:'Corta Anel',cat:'Sinais Vitais',qty:1,min:1,unit:'un'},
+  // ── SALÃO EM GERAL ──
+  {id:'prancha_rig',name:'Pranchas Rígidas Completas',cat:'Salão',qty:2,min:1,unit:'un'},
+  {id:'prancha_res',name:'Prancha Rígida Reserva',cat:'Salão',qty:1,min:1,unit:'un'},
+  {id:'prancha_curt',name:'Prancha Curta',cat:'Salão',qty:1,min:1,unit:'un'},
+  {id:'maca_ret',name:'Maca Retrátil',cat:'Salão',qty:1,min:1,unit:'un'},
+  {id:'cil_o2_4m',name:'Cilindro O₂ 4m³',cat:'Salão',qty:2,min:1,unit:'un'},
+  {id:'cil_o2_1m',name:'Cilindro O₂ 1m³ Completo',cat:'Salão',qty:1,min:1,unit:'un'},
+  {id:'cil_o2_port',name:'Cilindro O₂ Portátil 1m³ (Lacrado)',cat:'Salão',qty:1,min:1,unit:'un'},
+  {id:'cam_termica',name:'Câmera Térmica',cat:'Salão',qty:1,min:1,unit:'un'},
+  {id:'colar_inf',name:'Colar Cervical Infantil Regulável',cat:'Salão',qty:2,min:1,unit:'un'},
+  {id:'colar_set',name:'Colar Cervical Todos Tamanhos PP/P/M/G/GG',cat:'Salão',qty:1,min:1,unit:'jg'},
+  // ── BAÚ BANCO ──
+  {id:'cabo_energia',name:'Cabo de Energia Geral',cat:'Baú Banco',qty:1,min:1,unit:'un'},
+  {id:'lencol_desc',name:'Lençol Descartável - Pacote',cat:'Baú Banco',qty:1,min:1,unit:'pct'},
+  {id:'saco_bio',name:'Saco Lixo Biológico - Pacote',cat:'Baú Banco',qty:1,min:1,unit:'pct'},
+  {id:'avental',name:'Avental Manga Longa - Pacote',cat:'Baú Banco',qty:1,min:1,unit:'pct'},
+  {id:'agua_ox_1000',name:'Água Oxigenada 1000ml',cat:'Baú Banco',qty:1,min:1,unit:'un'},
+  {id:'alcool70_1000',name:'Álcool 70% 1000ml',cat:'Baú Banco',qty:1,min:1,unit:'un'},
+  {id:'sabao_derm',name:'Sabão Degermante 1000ml',cat:'Baú Banco',qty:1,min:1,unit:'un'},
+  // ── RESGATE EM ALTURA ──
+  {id:'maca_env',name:'Maca Envelope Task',cat:'Resgate em Altura',qty:1,min:1,unit:'un'},
+  {id:'descensor_id4',name:'Descensor Manual Tipo ID4',cat:'Resgate em Altura',qty:1,min:1,unit:'un'},
+  {id:'descensor_f8',name:'Descensor Manual Tipo Freio 8 TDO03',cat:'Resgate em Altura',qty:1,min:1,unit:'un'},
+  {id:'fita_anc',name:'Fita de Ancoragem Task 1,2m',cat:'Resgate em Altura',qty:2,min:2,unit:'un'},
+  {id:'mosquetao',name:'Mosquetão em Aço Task 25kN',cat:'Resgate em Altura',qty:10,min:10,unit:'un'},
+  {id:'placa_anc',name:'Placa de Ancoragem Task 45kN',cat:'Resgate em Altura',qty:1,min:1,unit:'un'},
+  {id:'polia_simp',name:'Polia Simples Athenas 30kN',cat:'Resgate em Altura',qty:1,min:1,unit:'un'},
+  {id:'polia_dup',name:'Polia Dupla Athenas 60kN',cat:'Resgate em Altura',qty:1,min:1,unit:'un'},
+  {id:'trava_quedas',name:'Trava Quedas Task Luck',cat:'Resgate em Altura',qty:1,min:1,unit:'un'},
+  {id:'ascensor',name:'Ascensor/Bloqueador de Punho (Tipo Jumar)',cat:'Resgate em Altura',qty:2,min:2,unit:'un'},
+  {id:'bolsa_arm',name:'Bolsa para Armazenamento',cat:'Resgate em Altura',qty:2,min:2,unit:'un'},
+  {id:'bloq_peito',name:'Bloqueador de Peito Grab II',cat:'Resgate em Altura',qty:1,min:1,unit:'un'},
+  {id:'bloq_mec',name:'Bloqueador Mecânico Athenas',cat:'Resgate em Altura',qty:2,min:2,unit:'un'},
+  {id:'cinto_para',name:'Cinto Tipo Paraquedista Task 6P',cat:'Resgate em Altura',qty:3,min:3,unit:'un'},
+  {id:'cabo_salv',name:'Cabo Salvamento Estático 100m',cat:'Resgate em Altura',qty:1,min:1,unit:'un'},
+  {id:'cordim',name:'Cordim (Cordelete) 10m',cat:'Resgate em Altura',qty:4,min:4,unit:'un'},
+  // ── EPI/COMBATE A INCÊNDIO ──
+  {id:'epi_resp',name:'Equipamento Proteção Respiratória Autônomo',cat:'EPI/Incêndio',qty:2,min:2,unit:'un'},
+  {id:'balaclava',name:'Balaclava com CA/EN/NFPA',cat:'EPI/Incêndio',qty:2,min:2,unit:'un'},
+  {id:'conj_incendio',name:'Conjunto Combate Incêndio c/ Calça e Jaqueta NFPA/EN',cat:'EPI/Incêndio',qty:2,min:2,unit:'un'},
+  {id:'bota_incendio',name:'Bota Combate Incêndio Cano Longo EN/NFPA',cat:'EPI/Incêndio',qty:2,min:2,unit:'un'},
+  {id:'luva_incendio',name:'Luva Combate Incêndio NFPA/EN',cat:'EPI/Incêndio',qty:2,min:2,unit:'un'},
+  {id:'capacete_salv',name:'Capacete Salvamento Veicular c/ Viseira',cat:'EPI/Incêndio',qty:3,min:3,unit:'un'},
+  {id:'luva_salv',name:'Luvas Atividade Salvamento Veicular',cat:'EPI/Incêndio',qty:3,min:3,unit:'un'},
+  {id:'conj_salv',name:'Conjunto Proteção Salvamento Veicular',cat:'EPI/Incêndio',qty:2,min:2,unit:'un'},
+  // ── CABINE RESGATE/SAPA ──
+  {id:'tapete_isol',name:'Tapete de Isolamento',cat:'SAPA/Resgate',qty:1,min:1,unit:'un'},
+  {id:'lona_palco',name:'Lona 1,5x1,5m Montagem Palco',cat:'SAPA/Resgate',qty:1,min:1,unit:'un'},
+  {id:'serra_sabre',name:'Serra Sabre com Lâminas',cat:'SAPA/Resgate',qty:1,min:1,unit:'un'},
+  {id:'cil_expans',name:'Cilindro Expansor a Bateria',cat:'SAPA/Resgate',qty:1,min:1,unit:'un'},
+  {id:'sep_bateria',name:'Ferramenta Separadora a Bateria',cat:'SAPA/Resgate',qty:1,min:1,unit:'un'},
+  {id:'corte_bateria',name:'Ferramenta de Corte a Bateria',cat:'SAPA/Resgate',qty:1,min:1,unit:'un'},
+  {id:'corta_frio',name:'Corta Frio',cat:'SAPA/Resgate',qty:1,min:1,unit:'un'},
+  {id:'luva_raspa',name:'Luva de Raspa',cat:'SAPA/Resgate',qty:2,min:2,unit:'par'},
+  {id:'hi_lift',name:'Hi-Lift Mínimo 1500kg c/ Certificação NFPA',cat:'SAPA/Resgate',qty:1,min:1,unit:'un'},
+  {id:'hooligan',name:'Hooligan p/ Acessos',cat:'SAPA/Resgate',qty:1,min:1,unit:'un'},
+  {id:'estabilizador',name:'Estabilizador de Tração',cat:'SAPA/Resgate',qty:2,min:2,unit:'un'},
+  {id:'prot_lona',name:'Proteção de Lona 1m x 1m',cat:'SAPA/Resgate',qty:4,min:4,unit:'un'},
+  {id:'prot_ferragem',name:'Protetor Plástico de Ferragem Transparente',cat:'SAPA/Resgate',qty:2,min:2,unit:'un'},
+  {id:'prot_rigida',name:'Proteção Rígida Transparente para Vítima',cat:'SAPA/Resgate',qty:2,min:2,unit:'un'},
+  {id:'prot_coluna',name:'Protetores de Coluna/Cortes de Lona c/ Velcro',cat:'SAPA/Resgate',qty:10,min:10,unit:'un'},
+  {id:'calcos',name:'Calços N°1 a N°4',cat:'SAPA/Resgate',qty:4,min:4,unit:'jg'},
+  {id:'taco_cunha_c',name:'Taco Cunha Curto',cat:'SAPA/Resgate',qty:2,min:2,unit:'un'},
+  {id:'taco_cunha_l',name:'Taco Cunha Longo',cat:'SAPA/Resgate',qty:2,min:2,unit:'un'},
+  {id:'taco_plano',name:'Taco Plano',cat:'SAPA/Resgate',qty:4,min:4,unit:'un'},
+  {id:'taco_quad',name:'Taco Quadrado',cat:'SAPA/Resgate',qty:4,min:4,unit:'un'},
+  {id:'cones',name:'Cones para Sinalização',cat:'SAPA/Resgate',qty:10,min:10,unit:'un'},
+  // ── ILUMINAÇÃO/ACESSÓRIOS ──
+  {id:'luva_kvolt',name:'Pares de Luva Elétrica Kvolt',cat:'Acessório',qty:3,min:3,unit:'par'},
+  {id:'lanterna_cab',name:'Lanternas de Cabeça',cat:'Acessório',qty:2,min:2,unit:'un'},
+  {id:'lanterna_mao',name:'Lanterna de Mão',cat:'Acessório',qty:1,min:1,unit:'un'},
+  {id:'kit_amuv',name:'Kit AMUV - Cartões + Lonas',cat:'Acessório',qty:1,min:1,unit:'un'},
+  {id:'luva_elv',name:'Luva Elétrica Kvolt',cat:'Acessório',qty:3,min:3,unit:'par'},
+  {id:'aparelho_tric',name:'Aparelho Tricotomia',cat:'Acessório',qty:1,min:1,unit:'un'},
+  {id:'fio_mono20',name:'Fio Sutura Mononylon 2.0',cat:'Acessório',qty:3,min:1,unit:'un'},
+  {id:'fio_mono40',name:'Fio Sutura Mononylon 4.0',cat:'Acessório',qty:3,min:1,unit:'un'},
+  {id:'bisturi15',name:'Lâmina Bisturi com Cabo N°15',cat:'Acessório',qty:2,min:1,unit:'un'},
+  {id:'bisturi23',name:'Lâmina Bisturi com Cabo N°23',cat:'Acessório',qty:2,min:1,unit:'un'},
+  // ── MEDICAMENTOS ADICIONAIS – Form Medicação Avançada ──
+  {id:'atenolol',name:'Atenolol 50mg VO',cat:'Medicamento',qty:3,min:1,unit:'cp'},
+  {id:'atensina',name:'Clonidina/Atensina 0,150mg',cat:'Medicamento',qty:3,min:1,unit:'cp'},
+  {id:'buscopam',name:'Buscopam Composto',cat:'Medicamento',qty:3,min:1,unit:'amp'},
+  {id:'cetoprofeno',name:'Cetoprofeno EV',cat:'Medicamento',qty:3,min:1,unit:'amp'},
+  {id:'clorpromazina',name:'Clorpromazina',cat:'Medicamento',qty:2,min:1,unit:'amp'},
+  {id:'complexo_b',name:'Complexo B',cat:'Medicamento',qty:1,min:1,unit:'amp'},
+  {id:'cimetidina',name:'Cimetidina',cat:'Medicamento',qty:3,min:1,unit:'amp'},
+  {id:'clonidina',name:'Clonidina 100mg',cat:'Medicamento',qty:3,min:1,unit:'amp'},
+  {id:'dopamina',name:'Dopamina',cat:'Medicamento',qty:1,min:1,unit:'amp'},
+  {id:'dolantina',name:'Dolantina (Petidina)',cat:'Medicamento',qty:3,min:1,unit:'amp'},
+  {id:'dramin',name:'Dramin B6',cat:'Medicamento',qty:3,min:1,unit:'amp'},
+  {id:'diazepam_vo',name:'Diazepam VO 10mg',cat:'Medicamento',qty:3,min:1,unit:'cp'},
+  {id:'glicose25',name:'Glicose 25%',cat:'Medicamento',qty:5,min:3,unit:'amp'},
+  {id:'hidroclorotiazida',name:'Hidroclorotiazida 50mg VO',cat:'Medicamento',qty:3,min:1,unit:'cp'},
+  {id:'metildopa',name:'Metildopa 500mg VO',cat:'Medicamento',qty:3,min:1,unit:'cp'},
+  {id:'ondasetrona',name:'Ondasetrona',cat:'Medicamento',qty:3,min:1,unit:'amp'},
+  {id:'propanolol',name:'Propranolol VO',cat:'Medicamento',qty:3,min:1,unit:'cp'},
+  {id:'solucortef',name:'Solucortef EV',cat:'Medicamento',qty:3,min:1,unit:'amp'},
+  {id:'terbutalina',name:'Terbutalina',cat:'Medicamento',qty:2,min:1,unit:'amp'},
+  // ── SINAIS VITAIS ADICIONAIS ──
+  {id:'esfig_obeso',name:'Esfigmomanômetro Obeso',cat:'Sinais Vitais',qty:1,min:1,unit:'un'},
+  {id:'lanterna_clin',name:'Lanterna Clínica',cat:'Sinais Vitais',qty:1,min:1,unit:'un'},
+  {id:'oximetro_banc',name:'Oxímetro de Bancada',cat:'Sinais Vitais',qty:1,min:1,unit:'un'},
+  {id:'term_parede',name:'Termômetro de Parede',cat:'Sinais Vitais',qty:1,min:1,unit:'un'},
+  // ── ACESSO VENOSO ADICIONAIS ──
+  {id:'scalp21',name:'Scalp 21 e 23',cat:'Acesso Venoso',qty:3,min:3,unit:'un'},
+  {id:'agulha13x45',name:'Agulha 13x4,5',cat:'Acesso Venoso',qty:3,min:3,unit:'un'},
+  {id:'equipo_bomba',name:'Equipo de Bomba de Infusão',cat:'Acesso Venoso',qty:2,min:1,unit:'un'},
+  // ── VIA AÉREA ADICIONAIS ──
+  {id:'ext_o2',name:'Extensão de O2',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'mask_inf100',name:'Máscara O2 Infantil 100%',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'ml_inf',name:'Máscara Laríngea Infantil',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  {id:'mask_rigida',name:'Máscara Rígida O2',cat:'Via Aérea',qty:2,min:1,unit:'un'},
+  {id:'mask_50',name:'Máscara 50% O2',cat:'Via Aérea',qty:1,min:1,unit:'un'},
+  // ── EQUIPAMENTOS ADICIONAIS ──
+  {id:'bomba_infusao',name:'Bomba de Infusão',cat:'Equipamento',qty:1,min:1,unit:'un'},
+  {id:'detector_fetal',name:'Detector Fetal',cat:'Equipamento',qty:1,min:1,unit:'un'},
+  {id:'torpedo_p',name:'Torpedo de O2 Pequeno',cat:'Equipamento',qty:1,min:1,unit:'un'},
+  {id:'torpedo_g',name:'Torpedo de O2 Grande',cat:'Equipamento',qty:2,min:1,unit:'un'},
+  // ── MATERIAL ADICIONAIS ──
+  {id:'algodao',name:'Algodão',cat:'Material',qty:1,min:1,unit:'pct'},
+  {id:'latex',name:'Látex (luva)',cat:'Material',qty:3,min:1,unit:'par'},
+  {id:'anaconda',name:'Anaconda (Prancha Flexível)',cat:'Material',qty:1,min:1,unit:'un'},
+  {id:'alcool_gel',name:'Álcool Gel de Parede',cat:'Material',qty:1,min:1,unit:'un'},
+  {id:'bacia_balde',name:'Bacia e Balde',cat:'Material',qty:1,min:1,unit:'jg'},
+  {id:'cinta_pelvica',name:'Cinta Pélvica',cat:'Material',qty:1,min:1,unit:'un'},
+  {id:'coxins',name:'Coxins',cat:'Material',qty:4,min:2,unit:'un'},
+  {id:'descarpack',name:'Descarpack',cat:'Material',qty:1,min:1,unit:'un'},
+  {id:'fita_zebrada',name:'Fita Zebrada',cat:'Material',qty:1,min:1,unit:'rl'},
+  {id:'kit_rn',name:'Kit RN (Recém-nascido)',cat:'Material',qty:1,min:1,unit:'un'},
+  {id:'kit_queimadura',name:'Kit Queimadura',cat:'Material',qty:1,min:1,unit:'un'},
+  {id:'kit_traqueias',name:'Kit Traquéias',cat:'Material',qty:1,min:1,unit:'un'},
+  {id:'lacre',name:'Lacre de Segurança',cat:'Material',qty:2,min:2,unit:'un'},
+  {id:'lona_transfer',name:'Lona de Transferência',cat:'Material',qty:1,min:1,unit:'un'},
+  {id:'oculos_prot',name:'Óculos de Proteção',cat:'Material',qty:3,min:1,unit:'un'},
+  {id:'pote_algodao',name:'Pote de Algodão',cat:'Material',qty:1,min:1,unit:'un'},
+  {id:'refletor_lum',name:'Refletor Luminoso',cat:'Material',qty:3,min:1,unit:'un'},
+  {id:'tala_colorida',name:'Talas Coloridas EVA (Azul/Amarela/Roxa/Laranja/Verde)',cat:'Material',qty:2,min:1,unit:'jg'},
+];
+const EL_ITEMS = [
+  // Elétrica Dianteira
+  ['e_pos_d','Luz Posição Direito'],['e_pos_e','Luz Posição Esquerdo'],
+  ['e_farol_baixo_d','Farol Baixo Direito'],['e_farol_baixo_e','Farol Baixo Esquerdo'],
+  ['e_farol_alto_d','Farol Alto Direito'],['e_farol_alto_e','Farol Alto Esquerdo'],
+  ['e_seta_d','Seta Dianteira Direito'],['e_seta_e','Seta Dianteira Esquerdo'],
+  ['e_pisca','Pisca Alerta'],['e_buzina','Buzina'],
+  ['e_palheta','Palhetas Para-brisa'],['e_esguicho','Esguicho Água/Para-brisa'],
+  // Luzes Emergência Dianteira
+  ['e_sirene','Sirene'],['e_giroflex','Giroflex'],
+  ['e_estrobo_d','Strobo Dianteiro'],['e_luz_cena_d','Luz de Cena/Foco Dianteiro'],
+  // Elétrica Traseira
+  ['e_lanterna_d','Lanterna Traseira Direito'],['e_lanterna_e','Lanterna Traseira Esquerdo'],
+  ['e_re_d','Luz de Ré Direito'],['e_re_e','Luz de Ré Esquerdo'],
+  ['e_freio_d','Luz Freio Direito'],['e_freio_e','Luz Freio Esquerdo'],
+  ['e_seta_tr_d','Seta Traseira Direito'],['e_seta_tr_e','Seta Traseira Esquerdo'],
+  ['e_pisca_tr','Pisca Alerta Traseiro'],
+  // Luzes Emergência Traseira
+  ['e_ilum_tr','Iluminação Traseira'],['e_estrobo_t','Strobo Traseiro'],
+  ['e_luz_cena_t','Luz de Cena/Foco Traseiro'],['e_alarme_re','Alarme Marcha Ré'],
+];
+const RADIO_NAMES = ['ambulancia','turno','combustivel','m_agua','m_oleo','m_freios','m_hidraulica','m_motor_geral','m_ac_cabine','m_ac_salao','pneus','limp_int','limp_ext','ac_retro_d','ac_retro_e','ac_estepe','ac_chave_roda','ac_triangulo','ac_macaco','ac_bancos','ac_tapetes','ac_docs','ac_radio','ac_extintor_g','ac_extintor_m',...EL_ITEMS.map(i=>i[0])];
+const TEXT_IDS    = ['hodometro','km_fim','condutor','data-v','horario','temp_int','temp_ext','cil01','cil02','cil03'];
+const GOOD = new Set(['NORMAL','PRESENTE','SIM','LIMPA','COMPLETO','3/4','MEIO','07:00 MANHA','13:00 TARDE','19:00 NOITE','PLANTAO M/T','OK']);
+const BAD  = new Set(['BAIXO','AUSENTE','NAO','NAO_LIMPA','RESERVA','1/4','1/3','NOK']);
+
+// ═══════ DB ═══════
+// ═══════════════════════════════════════════
+//  DB — Firebase + localStorage fallback
+// ═══════════════════════════════════════════
+const DB = {
+  // localStorage como cache local rápido
+  get(k){try{return JSON.parse(localStorage.getItem('ac_'+k))||null}catch{return null}},
+  set(k,v){localStorage.setItem('ac_'+k,JSON.stringify(v))},
+  getC(cid,k){return this.get('co_'+cid+'_'+k)},
+  setC(cid,k,v){
+    this.set('co_'+cid+'_'+k,v);
+    // Sync com Firestore em background
+    if(window._fbReady && cid && k){
+      const {doc,setDoc} = window._fbFns;
+      setDoc(doc(window._fbDb,'companies',String(cid),String(k),'data'),
+        {value:JSON.stringify(v), updated:Date.now()},{merge:true})
+        .catch(e=>console.warn('Sync:',e));
+    }
+  },
+};
+
+// ═══════ STATE ═══════
+let CU=null, currentSugId=null, editRtAmbId=null;
+
+// ═══════ HELPERS ═══════
+const uid=()=>Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,4).toUpperCase();
+const nowStr=()=>new Date().toLocaleString('pt-BR');
+const nowDate=()=>new Date().toISOString().slice(0,10);
+const nowTime=()=>new Date().toTimeString().slice(0,5);
+const nowDT=()=>new Date().toISOString().slice(0,16);
+const qs=s=>document.querySelector(s);
+const qid=id=>document.getElementById(id);
+const gR=n=>{const e=qs(`input[name="${n}"]:checked`);return e?e.value:''};
+function showToast(msg){const t=qid('toast');qid('toast-msg').textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3200)}
+function openModal(id){qid(id).classList.add('show')}
+function closeModal(id){qid(id).classList.remove('show')}
+
+// Company shortcuts
+const cid=()=>CU.companyId;
+const getUsers=()=>DB.getC(cid(),'users')||[];
+const setUsers=v=>DB.setC(cid(),'users',v);
+const getAmbs=()=>DB.getC(cid(),'ambs')||[];
+const setAmbs=v=>DB.setC(cid(),'ambs',v);
+const getStock=()=>DB.getC(cid(),'stock')||DEFAULT_STOCK.map(i=>({...i}));
+const setStock=v=>DB.setC(cid(),'stock',v);
+const getChks=()=>DB.getC(cid(),'checklists')||[];
+const setChks=v=>DB.setC(cid(),'checklists',v);
+const getAlts=()=>DB.getC(cid(),'alteracoes')||[];
+const setAlts=v=>DB.setC(cid(),'alteracoes',v);
+const getUsos=()=>DB.getC(cid(),'usos')||[];
+const setUsos=v=>DB.setC(cid(),'usos',v);
+const getSugs=()=>DB.getC(cid(),'sugestoes')||[];
+const setSugs=v=>DB.setC(cid(),'sugestoes',v);
+const getExtras=()=>DB.getC(cid(),'extras')||[];
+const setExtras=v=>DB.setC(cid(),'extras',v);
+const getCfg=()=>DB.getC(cid(),'config')||{};
+const setCfg=v=>DB.setC(cid(),'config',v);
+const getAllCos=()=>DB.get('companies')||[];
+const setAllCos=v=>DB.set('companies',v);
+const getAmb=id=>getAmbs().find(a=>a.id===id);
+const getRTs=()=>getUsers().filter(u=>u.role==='RT'||u.role==='Administrador');
+const pendingSugs=()=>getSugs().filter(s=>s.status==='pendente').length;
+
+// ═══════ AUTH ═══════
+function authTab(tab,el){
+  document.querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.auth-form').forEach(f=>f.classList.remove('active'));
+  qid('af-'+tab).classList.add('active');
+}
+
+function findUser(email,senha){
+  if(email===SUPER.email&&senha===SUPER.senha) return SUPER;
+  for(const co of getAllCos()){
+    const u=(DB.getC(co.id,'users')||[]).find(u=>u.email===email&&u.senha===senha);
+    if(u) return{...u,companyId:co.id,empresa:co.nome,companyPlano:co.plano};
+  }
+  return null;
+}
+
+async function doLogin(){
+  const email=qid('l-email').value.trim(),senha=qid('l-senha').value;
+  const err=qid('login-err'); err.classList.remove('show');
+  if(!email||!senha){err.classList.add('show');return;}
+  // Super admin local
+  if(email===SUPER.email&&senha===SUPER.senha){loginOk(SUPER);return;}
+  // Tentar Firebase Auth
+  if(window._fbReady){
+    try{
+      const cred = await window._fbFns.signInWithEmailAndPassword(window._fbAuth, email, senha);
+      const uid = cred.user.uid;
+      const userDoc = await window._fbFns.getDoc(window._fbFns.doc(window._fbDb,'users',uid));
+      if(userDoc.exists()){
+        const u = userDoc.data();
+        if(u.companyId){
+          const coDoc = await window._fbFns.getDoc(window._fbFns.doc(window._fbDb,'companies',u.companyId,'config','data'));
+          const cfg = coDoc.exists() ? JSON.parse(coDoc.data().value||'{}') : {};
+          loginOk({...u, empresa:cfg.empresa||u.companyId, companyPlano:cfg.plano||'basic'});
+          return;
+        }
+      }
+    } catch(e){ if(!e.code||!e.code.includes('user-not-found'))console.warn('FB login:',e.code); }
+  }
+  // Fallback localStorage
+  const u=findUser(email,senha);
+  if(!u){err.classList.add('show');return;}
+  loginOk(u);
+}
+
+function demoLogin(){
+  let cos=getAllCos(), co=cos.find(c=>c.id==='demo');
+  if(!co){
+    co={id:'demo',nome:'SAMU Regional — Demo',plano:'Padrão',criado:nowStr()};
+    cos.push(co); setAllCos(cos);
+    DB.setC('demo','users',[
+      {id:'u-admin',nome:'Leonardo (Admin)',email:'admin@demo.com',senha:'demo123',role:'Administrador',companyId:'demo',criado:nowStr()},
+      {id:'u-rt',nome:'Dr. Carvalho (RT)',email:'rt@demo.com',senha:'demo123',role:'RT',companyId:'demo',criado:nowStr()},
+      {id:'u-cond',nome:'Carlos (Condutor)',email:'cond@demo.com',senha:'demo123',role:'Condutor',companyId:'demo',criado:nowStr()},
+      {id:'u-tec',nome:'Ana (Técnica)',email:'tec@demo.com',senha:'demo123',role:'Técnico',companyId:'demo',criado:nowStr()},
+    ]);
+    DB.setC('demo','ambs',[
+      {id:'a1',prefixo:'SA-01',placa:'JBV 5I90',modelo:'Sprinter 2.2',ano:'2022',rt:'u-rt',status:'Ativo',criado:nowStr()},
+      {id:'a2',prefixo:'SB-01',placa:'JDJ 7G22',modelo:'Transit',ano:'2021',rt:'',status:'Ativo',criado:nowStr()},
+      {id:'a3',prefixo:'SA-RES',placa:'JDN 1A78',modelo:'Sprinter 319',ano:'2023',rt:'u-rt',status:'Ativo',criado:nowStr()},
+    ]);
+    DB.setC('demo','config',{empresa:'SAMU Regional — Demo',rtPrincipal:'u-rt',gas_url:''});
+  }
+  const admin=(DB.getC('demo','users')||[]).find(u=>u.role==='Administrador');
+  loginOk({...admin,companyId:'demo',empresa:co.nome,companyPlano:co.plano});
+}
+
+function doRegister(){
+  const nome=qid('r-nome').value.trim(),email=qid('r-email').value.trim();
+  const empresa=qid('r-empresa').value.trim(),senha=qid('r-senha').value,plano=qid('r-plano').value;
+  const err=qid('reg-err'); err.classList.remove('show');
+  if(!nome||!email||!empresa||!senha){err.textContent='Preencha todos os campos.';err.classList.add('show');return}
+  if(senha.length<6){err.textContent='Senha mínima 6 caracteres.';err.classList.add('show');return}
+  const allUsers=getAllCos().flatMap(co=>DB.getC(co.id,'users')||[]);
+  if(allUsers.find(u=>u.email===email)){err.textContent='E-mail já cadastrado.';err.classList.add('show');return}
+  const coId='co_'+uid();
+  const cos=getAllCos(); cos.push({id:coId,nome:empresa,plano,criado:nowStr()}); setAllCos(cos);
+  const user={id:'u_'+uid(),nome,email,senha,role:'Administrador',companyId:coId,criado:nowStr()};
+  DB.setC(coId,'users',[user]);
+  DB.setC(coId,'config',{empresa,rtPrincipal:'',gas_url:'',plano});
+  // Criar no Firebase Auth em background
+  if(window._fbReady){
+    window._fbFns.createUserWithEmailAndPassword(window._fbAuth, email, senha)
+      .then(cred=>{
+        return window._fbFns.setDoc(window._fbFns.doc(window._fbDb,'users',cred.user.uid),
+          {id:user.id, firebaseUid:cred.user.uid, email, nome,
+           role:'Administrador', companyId:coId, criado:nowStr()});
+      })
+      .catch(e=>console.warn('FB register:',e.message));
+  }
+  loginOk({...user,empresa,companyPlano:plano});
+}
+
+function loginOk(user){
+  CU=user; DB.set('session',user);
+  // Salvar user no Firestore
+  if(window._fbReady && user && user.id){
+    const {doc,setDoc} = window._fbFns;
+    setDoc(doc(window._fbDb,'users',user.id),
+      {id:user.id, email:user.email, nome:user.nome, role:user.role,
+       companyId:user.companyId||'', updated:Date.now()},{merge:true})
+      .catch(e=>console.warn('User sync:',e));
+  }
+  qid('page-auth').classList.remove('active');
+  qid('page-app').classList.add('active');
+  setupApp();
+}
+
+function doLogout(){
+  CU=null; DB.set('session',null);
+  if(window._fbReady) window._fbFns.signOut(window._fbAuth).catch(()=>{});
+  qid('page-app').classList.remove('active');
+  qid('page-auth').classList.add('active');
+  qid('l-email').value=''; qid('l-senha').value='';
+}
+
+// ═══════ SETUP ═══════
+function setupApp(){
+  qid('sb-nome').textContent=CU.nome;
+  qid('sb-co').textContent=CU.empresa||'—';
+  qid('topbar-co').textContent=CU.empresa||'AmbuCheck';
+  qid('sb-role').innerHTML=`<span class="rp ${ROLE_PILL[CU.role]||'rp-func'}">${ROLE_LABEL[CU.role]||CU.role}</span>`;
+  buildNav();
+  buildAmbRadios();
+  renderEletrico();
+  renderExtraItems();
+  initDateTime();
+  renderDashboard();
+  renderStock();
+  renderAlts();
+  renderUso();
+  renderUsers();
+  renderAmbs();
+  renderSugs();
+  renderAprovacoes();
+  initConfig();
+  window._kmSaidas=[]; renderKmSaidas();
+  buildBottomNav();
+  if(CU.role==='superadmin') renderSuperAdmin();
+}
+
+// ═══════ NAV ═══════
+function buildNav(){
+  const nav=qid('sb-nav'); nav.innerHTML='';
+  const role=CU.role;
+  function addSep(t){const d=document.createElement('div');d.className='sb-sep';d.textContent=t;nav.appendChild(d)}
+  function addNav(icon,label,panel,badge,badgeCls){
+    const d=document.createElement('div');d.className='sn';d.dataset.panel=panel;
+    const cnt=badge?badge():0;
+    d.innerHTML=`<span class="sn-icon">${icon}</span>${label}${cnt?`<span class="sn-badge ${badgeCls||''}">${cnt}</span>`:''}`;
+    d.onclick=()=>{showPanel(panel);document.querySelectorAll('.sn').forEach(n=>n.classList.remove('active'));d.classList.add('active')};
+    nav.appendChild(d); return d;
+  }
+  if(role==='superadmin'){addSep('Super Admin');addNav('🌐','Todas as Empresas','superadmin').classList.add('active');return}
+  addSep('Principal');
+  addNav('📊','Dashboard','dashboard').classList.add('active');
+  addNav('📋','Checklist','checklist');
+  if(role==='RT'||role==='Administrador'){addSep('Aprovações');addNav('⏳','Aprovar Sugestões','aprovacoes',pendingSugs,'ye')}
+  if(role==='Condutor'||role==='Técnico'){addSep('Sugestões');addNav('💡','Sugerir Item','sugerir')}
+  addSep('Registros');
+  addNav('🔧','Alterações','alteracoes');
+  addNav('💊','Estoque & Uso','estoque');
+  if(role==='Administrador'||role==='RT'){
+    addSep('Gestão');
+    addNav('👥','Usuários','usuarios');
+    addNav('🚑','Ambulâncias','ambulancias');
+    addNav('⚙️','Configurações','config');
+  }
+}
+
+function showPanel(id){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  const p=qid('panel-'+id); if(p) p.classList.add('active');
+  const T={dashboard:'Dashboard',checklist:'Checklist Mecânico',aprovacoes:'Aprovações RT',sugerir:'Sugerir Item',alteracoes:'Alterações',estoque:'Estoque & Medicações',usuarios:'Usuários',ambulancias:'Ambulâncias',config:'Configurações',superadmin:'Super Admin'};
+  qid('topbar-title').textContent=T[id]||id;
+  if(id==='estoque'){renderStock();renderUso()}
+  if(id==='aprovacoes'){renderAprovacoes();refreshBadge()}
+  if(id==='dashboard') renderDashboard();
+  if(id==='superadmin') renderSuperAdmin();
+}
+
+function refreshBadge(){
+  const b=qs('.sn[data-panel="aprovacoes"] .sn-badge');
+  if(b) b.textContent=pendingSugs();
+}
+
+// ═══════ AMBULÂNCIAS ═══════
+function buildAmbRadios(){
+  const ambs=getAmbs();
+  ['amb-radios','alt-amb-r','uso-amb-r'].forEach(id=>{
+    const el=qid(id); if(!el) return;
+    const name=id==='amb-radios'?'ambulancia':id==='alt-amb-r'?'alt_amb':'uso_amb';
+    el.innerHTML=ambs.length
+      ? ambs.map(a=>{
+          const ti=TIPOS[a.tipo]||{icon:'🚑'};
+          const fn=name==='ambulancia'?`onchange="onAmbSelect('${a.id}')"`:''
+          return`<label class="rb"><input type="radio" name="${name}" value="${a.id}" ${fn} onchange="upd()"><span>${ti.icon} ${a.prefixo} (${a.placa})</span></label>`;
+        }).join('')
+      : '<span style="color:var(--muted);font-size:0.83rem">Nenhuma ambulância cadastrada.</span>';
+  });
+}
+
+function onAmbSelect(ambId){
+  const amb=getAmb(ambId);
+  const info=qid('amb-equipe-info');
+  if(!amb||!amb.equipe||!amb.equipe.length){if(info)info.style.display='none';return;}
+  const users=getUsers();
+  const ti=TIPOS[amb.tipo]||{icon:'🚑',label:amb.tipo};
+  const eqStr=amb.equipe.map(e=>{
+    const u=users.find(x=>x.id===e.userId);
+    return`<span style="display:inline-flex;align-items:center;gap:4px;margin:2px 4px 2px 0;padding:2px 8px;background:var(--dark4);border:1px solid var(--border);border-radius:4px;font-size:0.75rem">${u?'👤 '+u.nome:e.cargo}</span>`;
+  }).join('');
+  if(info){info.innerHTML=`<b style="color:var(--text)">${ti.icon} ${amb.prefixo} — Equipe Fixa:</b><br>${eqStr}`;info.style.display='block';}
+}
+
+function renderAmbs(){
+  const tbody=qid('ambs-tbody'); if(!tbody) return;
+  const ambs=getAmbs(), users=getUsers();
+  if(!ambs.length){tbody.innerHTML='<tr><td colspan="7" class="empty">Nenhuma ambulância cadastrada.</td></tr>';return}
+  tbody.innerHTML=ambs.map(a=>{
+    const rt=users.find(u=>u.id===a.rt);
+    const ti=TIPOS[a.tipo]||{icon:'🚑',cor:'#888'};
+    const eqStr=(a.equipe||[]).map(e=>{
+      const u=users.find(x=>x.id===e.userId);
+      return u?`${e.cargo}: <b>${u.nome.split(' ')[0]}</b>`:e.cargo;
+    }).join('<br>')||'<span style="color:var(--muted2)">—</span>';
+    return `<tr>
+      <td><b>${a.prefixo}</b><br><span style="font-size:0.72rem;color:var(--muted)">${a.placa}</span></td>
+      <td>${tipoPill(a.tipo)}</td>
+      <td style="font-size:0.78rem">${a.modelo||'—'}${a.ano?` (${a.ano})`:''}</td>
+      <td style="font-size:0.76rem;line-height:1.6">${eqStr}</td>
+      <td>${rt?`<span class="badge b-ye">${rt.nome.split(' ')[0]}</span>`:'<span class="badge b-gray">Empresa</span>'}</td>
+      <td><span class="badge ${a.status==='Ativo'?'b-ok':'b-nok'}">${a.status}</span></td>
+      <td style="white-space:nowrap">
+        <button class="btn ghost sm" onclick="openSetRT('${a.id}')" style="margin-bottom:3px">RT</button>
+        <button class="btn ghost sm" onclick="openEditEquipe('${a.id}')">Equipe</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Tipo de ambulância ──
+function onTipoChange(){
+  const tipo=qid('ma-tipo').value;
+  const info=TIPOS[tipo];
+  const div=qid('ma-tipo-info');
+  if(!info){if(div)div.style.display='none';return;}
+  qid('ma-tipo-desc').textContent=info.equipe.join(' · ');
+  div.style.display='block';
+  // Pré-preencher equipe
+  qid('ma-equipe-list').innerHTML=''; eqCounter=0;
+  info.equipe.forEach(cargo=>addEqRow('ma-equipe-list',cargo,''));
+}
+
+// ── Equipe rows ──
+function addEqRow(listId,cargo,userId){
+  const users=getUsers();
+  const id='eq_'+(++eqCounter);
+  const div=document.createElement('div');
+  div.id=id; div.className='eq-row';
+  div.innerHTML=`
+    <input class="fi" type="text" placeholder="Cargo / Função" value="${cargo||''}" style="font-size:0.82rem;padding:7px 10px">
+    <select class="fi" style="font-size:0.82rem;padding:7px 10px">
+      <option value="">Funcionário (opcional)</option>
+      ${users.map(u=>`<option value="${u.id}"${u.id===(userId||'')?' selected':''}>${u.nome} (${u.role})</option>`).join('')}
+    </select>
+    <button class="btn danger sm" onclick="qid('${id}').remove()" style="padding:5px 9px;width:32px;justify-content:center">✕</button>`;
+  qid(listId).appendChild(div);
+}
+
+function getEquipeFromList(listId){
+  return Array.from(qid(listId).children).map(row=>{
+    const inputs=row.querySelectorAll('input,select');
+    return{cargo:inputs[0].value.trim(),userId:inputs[1].value};
+  }).filter(e=>e.cargo||e.userId);
+}
+
+// ── Modal ambulância ──
+function openModalAmb(){
+  editAmbId=null;
+  qid('modal-amb-title').textContent='Cadastrar Ambulância';
+  qid('ma-prefixo').value=''; qid('ma-placa').value='';
+  qid('ma-tipo').value=''; qid('ma-tipo-info').style.display='none';
+  qid('ma-modelo').value=''; qid('ma-ano').value='';
+  qid('ma-equipe-list').innerHTML=''; eqCounter=0;
+  const sel=qid('ma-rt');
+  sel.innerHTML='<option value="">Sem RT específico (usa RT da empresa)</option>';
+  getRTs().forEach(u=>sel.innerHTML+=`<option value="${u.id}">${u.nome} (${u.role})</option>`);
+  qid('modal-amb-foot').innerHTML=`<button class="btn red" onclick="saveAmb()">Cadastrar</button><button class="btn ghost" onclick="closeModal('modal-amb')">Cancelar</button>`;
+  openModal('modal-amb');
+}
+
+function openEditEquipe(ambId){
+  editAmbId=ambId;
+  const amb=getAmb(ambId); if(!amb) return;
+  qid('modal-amb-title').textContent=`Editar — ${amb.prefixo}`;
+  qid('ma-prefixo').value=amb.prefixo; qid('ma-placa').value=amb.placa;
+  qid('ma-tipo').value=amb.tipo||''; qid('ma-tipo-info').style.display='none';
+  qid('ma-modelo').value=amb.modelo||''; qid('ma-ano').value=amb.ano||'';
+  qid('ma-equipe-list').innerHTML=''; eqCounter=0;
+  (amb.equipe||[]).forEach(e=>addEqRow('ma-equipe-list',e.cargo,e.userId));
+  const sel=qid('ma-rt');
+  sel.innerHTML='<option value="">Sem RT específico</option>';
+  getRTs().forEach(u=>sel.innerHTML+=`<option value="${u.id}"${u.id===amb.rt?' selected':''}>${u.nome} (${u.role})</option>`);
+  qid('modal-amb-foot').innerHTML=`<button class="btn red" onclick="saveAmb()">💾 Salvar</button><button class="btn ghost" onclick="closeModal('modal-amb')">Cancelar</button>`;
+  openModal('modal-amb');
+}
+
+function saveAmb(){
+  const pref=qid('ma-prefixo').value.trim();
+  const placa=qid('ma-placa').value.trim();
+  const tipo=qid('ma-tipo').value;
+  if(!pref||!placa){showToast('❌ Prefixo e placa são obrigatórios.');return;}
+  if(!tipo){showToast('❌ Selecione o tipo da ambulância.');return;}
+  const equipe=getEquipeFromList('ma-equipe-list');
+  const ambs=getAmbs();
+  if(editAmbId){
+    const idx=ambs.findIndex(a=>a.id===editAmbId);
+    if(idx>=0) ambs[idx]={...ambs[idx],prefixo:pref,placa,tipo,modelo:qid('ma-modelo').value.trim(),ano:qid('ma-ano').value.trim(),rt:qid('ma-rt').value,equipe};
+    setAmbs(ambs);showToast(`✅ Ambulância ${pref} atualizada!`);
+  } else {
+    ambs.push({id:'a_'+uid(),prefixo:pref,placa,tipo,modelo:qid('ma-modelo').value.trim(),ano:qid('ma-ano').value.trim(),rt:qid('ma-rt').value,status:'Ativo',criado:nowStr(),equipe});
+    setAmbs(ambs);showToast(`✅ Ambulância ${pref} (${tipo}) cadastrada!`);
+  }
+  closeModal('modal-amb'); buildAmbRadios(); renderAmbs(); buildEscAmbSelect();
+  editAmbId=null;
+}
+
+function openSetRT(ambId){
+  editRtAmbId=ambId;
+  const amb=getAmb(ambId);
+  qid('set-rt-info').textContent=`Ambulância: ${amb.prefixo} (${amb.placa})`;
+  const sel=qid('set-rt-sel');
+  sel.innerHTML='<option value="">Sem RT específico</option>';
+  getRTs().forEach(u=>sel.innerHTML+=`<option value="${u.id}"${u.id===amb.rt?' selected':''}>${u.nome} (${u.role})</option>`);
+  openModal('modal-set-rt');
+}
+
+function salvarRtAmb(){
+  const ambs=getAmbs(), idx=ambs.findIndex(a=>a.id===editRtAmbId);
+  if(idx>=0){ambs[idx].rt=qid('set-rt-sel').value; setAmbs(ambs)}
+  closeModal('modal-set-rt'); renderAmbs(); showToast('✅ RT da ambulância atualizado!');
+}
+
+// ═══════ CHECKLIST ═══════
+function renderEletrico(){
+  const el=qid('el-rows'); if(!el) return;
+  el.innerHTML=EL_ITEMS.map(([n,l])=>`
+    <div class="gr-r" style="grid-template-columns:1fr 90px 90px">
+      <span class="rl">${l}</span>
+      <label class="gra pres"><input type="radio" name="${n}" value="PRESENTE" onchange="upd()"><span>Presente</span></label>
+      <label class="gra aus"><input type="radio" name="${n}" value="AUSENTE" onchange="upd()"><span>Ausente</span></label>
+    </div>`).join('');
+}
+
+function renderExtraItems(){
+  const extras=getExtras().filter(e=>e.tipo==='checklist'||e.tipo==='ambos');
+  const body=qid('extra-body'); if(!body) return;
+  if(!extras.length){body.innerHTML='<span style="color:var(--muted);font-size:0.83rem">Nenhum item adicional aprovado ainda.</span>';return}
+  body.innerHTML=extras.map(e=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span class="badge b-ok">${e.categoria}</span>
+      <span style="font-size:0.85rem;font-weight:600">${e.nome}</span>
+      <div class="rg" style="margin-left:auto">
+        <label class="rb"><input type="radio" name="ex_${e.id}" value="OK" onchange="upd()"><span>✔ OK</span></label>
+        <label class="rb"><input type="radio" name="ex_${e.id}" value="NOK" onchange="upd()"><span>✘ N/OK</span></label>
+        <label class="rb"><input type="radio" name="ex_${e.id}" value="NA" onchange="upd()"><span>N/A</span></label>
+      </div>
+    </div>`).join('');
+}
+
+function upd(){
+  const extras=getExtras().filter(e=>e.tipo==='checklist'||e.tipo==='ambos');
+  const allRadios=[...RADIO_NAMES,...extras.map(e=>`ex_${e.id}`)];
+  const total=allRadios.length+TEXT_IDS.length;
+  let ans=0,ok=0,nok=0;
+  allRadios.forEach(n=>{const e=qs(`input[name="${n}"]:checked`);if(e){ans++;GOOD.has(e.value)?ok++:BAD.has(e.value)?nok++:ok++}});
+  TEXT_IDS.forEach(id=>{if(qid(id)?.value.trim())ans++});
+  qid('st-ok').textContent=`${ok} OK`;
+  qid('st-nok').textContent=`${nok} Problema`;
+  qid('st-pend').textContent=`${total-ans} Pendentes`;
+  qid('pfill').style.width=(ans/total*100)+'%';
+  qid('pcnt').textContent=`${ans}/${total}`;
+}
+
+function submitChecklist(){
+  const missing=[];
+  if(!qid('hodometro').value) missing.push('Hodômetro');
+  if(!qid('condutor').value) missing.push('Condutor');
+  if(!qs('input[name="ambulancia"]:checked')) missing.push('Ambulância');
+  if(!qs('input[name="turno"]:checked')) missing.push('Turno');
+  if(!qs('input[name="combustivel"]:checked')) missing.push('Combustível');
+  if(missing.length){showToast('❌ Obrigatórios: '+missing.join(', '));return}
+  const ambId=gR('ambulancia');
+  const amb=getAmb(ambId)||{prefixo:ambId,placa:'—'};
+  const rec={
+    id:'CHK-'+uid(), dt:nowStr(), data:qid('data-v').value, horario:qid('horario').value,
+    condutor:qid('condutor').value, usuario:CU.nome, userId:CU.id,
+    amb:`${amb.prefixo} (${amb.placa})`, turno:gR('turno'), combustivel:gR('combustivel'),
+    m_agua:gR('m_agua'), m_oleo:gR('m_oleo'), m_freios:gR('m_freios'),
+    m_hidraulica:gR('m_hidraulica'), m_motor_geral:gR('m_motor_geral'), m_ac_cabine:gR('m_ac_cabine'), m_ac_salao:gR('m_ac_salao'),
+    ac_retro_d:gR('ac_retro_d'), ac_retro_e:gR('ac_retro_e'), ac_estepe:gR('ac_estepe'), ac_chave_roda:gR('ac_chave_roda'),
+    ac_triangulo:gR('ac_triangulo'), ac_macaco:gR('ac_macaco'), ac_bancos:gR('ac_bancos'), ac_tapetes:gR('ac_tapetes'),
+    ac_docs:gR('ac_docs'), ac_radio:gR('ac_radio'), ac_extintor_g:gR('ac_extintor_g'), ac_extintor_m:gR('ac_extintor_m'),
+    ...Object.fromEntries(EL_ITEMS.map(([n])=>[n,gR(n)])),
+    cil01:qid('cil01').value, cil02:qid('cil02').value, cil03:qid('cil03').value,
+    pneus:gR('pneus'), limp_int:gR('limp_int'), limp_ext:gR('limp_ext'),
+    intercorrencias:qid('intercorrencias').value, hodometro:qid('hodometro').value,
+    temp_int:qid('temp_int').value, temp_ext:qid('temp_ext').value,
+    km_fim:qid('km_fim').value, km_saidas:window._kmSaidas||[]
+  };
+  const chks=getChks(); chks.unshift(rec); setChks(chks);
+  saveKmHist(rec);
+  sendToDrive({type:'checklist',row:Object.values(rec)});
+  window._kmSaidas=[]; renderKmSaidas();
+  qid('km_fim').value='';
+  showToast('✅ Checklist registrado! ID: '+rec.id);
+  renderDashboard();
+}
+
+// ═══════ SUGESTÕES ═══════
+function submitSugestao(){
+  const nome=qid('sug-nome').value.trim(), cat=qid('sug-cat').value, just=qid('sug-just').value.trim(), tipo=gR('sug_tipo');
+  if(!nome||!cat||!just){showToast('❌ Preencha nome, categoria e justificativa.');return}
+  const sug={id:'SUG-'+uid(),nome,categoria:cat,tipo:tipo||'estoque',justificativa:just,solicitante:CU.nome,solicitanteId:CU.id,status:'pendente',dtSolicitacao:nowStr(),obsRT:''};
+  const sugs=getSugs(); sugs.unshift(sug); setSugs(sugs);
+  qid('sug-nome').value=''; qid('sug-cat').value=''; qid('sug-just').value='';
+  renderSugs(); refreshBadge();
+  showToast('✅ Sugestão enviada! Aguardando aprovação do RT.');
+}
+
+function renderSugs(){
+  const tbody=qid('sug-tbody'); if(!tbody) return;
+  const sugs=getSugs().filter(s=>s.solicitanteId===CU.id);
+  if(!sugs.length){tbody.innerHTML='<tr><td colspan="6" class="empty">Você ainda não enviou sugestões.</td></tr>';return}
+  const sc={pendente:'b-ye',aprovado:'b-ok',rejeitado:'b-nok'};
+  tbody.innerHTML=sugs.map(s=>`<tr>
+    <td><b>${s.nome}</b></td><td>${s.categoria}</td><td><span class="badge b-info">${s.tipo}</span></td>
+    <td style="font-size:0.75rem">${s.dtSolicitacao}</td>
+    <td><span class="badge ${sc[s.status]}">${s.status}</span></td>
+    <td style="font-size:0.78rem;color:var(--muted)">${s.obsRT||'—'}</td>
+  </tr>`).join('');
+}
+
+// ═══════ APROVAÇÕES ═══════
+function renderAprovacoes(){
+  const pending=getSugs().filter(s=>s.status==='pendente');
+  const hist=getSugs().filter(s=>s.status!=='pendente');
+  const pel=qid('aprv-pending');
+  if(!pending.length){pel.innerHTML='<span style="color:var(--muted);font-size:0.83rem">Nenhuma sugestão pendente ✅</span>'}
+  else{
+    pel.innerHTML=pending.map(s=>`
+      <div class="aprv-card">
+        <div class="aprv-meta">
+          <span class="aprv-name">${s.nome}</span>
+          <span class="badge b-ye">${s.categoria}</span>
+          <span class="badge b-info">${s.tipo}</span>
+          <span style="font-size:0.73rem;color:var(--muted);margin-left:auto">por ${s.solicitante} · ${s.dtSolicitacao}</span>
+        </div>
+        <div class="aprv-desc">📝 ${s.justificativa}</div>
+        <div style="display:flex;gap:8px"><button class="btn sm" style="background:#92400E;color:var(--yellow)" onclick="abrirAprv('${s.id}')">Revisar →</button></div>
+      </div>`).join('');
+  }
+  const hel=qid('aprv-hist-tb');
+  if(!hist.length){hel.innerHTML='<tr><td colspan="5" class="empty">Sem histórico.</td></tr>';return}
+  const sc={aprovado:'b-ok',rejeitado:'b-nok'};
+  hel.innerHTML=hist.map(s=>`<tr>
+    <td><b>${s.nome}</b></td><td>${s.solicitante}</td>
+    <td><span class="badge ${sc[s.status]}">${s.status}</span></td>
+    <td style="font-size:0.75rem">${s.dtDecisao||'—'}</td>
+    <td style="font-size:0.78rem">${s.obsRT||'—'}</td>
+  </tr>`).join('');
+}
+
+function abrirAprv(id){
+  currentSugId=id;
+  const sug=getSugs().find(s=>s.id===id);
+  qid('aprv-title').textContent='Revisar: '+sug.nome;
+  qid('aprv-body').innerHTML=`
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+      <span class="badge b-ye">${sug.categoria}</span>
+      <span class="badge b-info">${sug.tipo}</span>
+    </div>
+    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:10px">Solicitado por <b style="color:var(--text)">${sug.solicitante}</b> em ${sug.dtSolicitacao}</div>
+    <div style="background:#0A0C12;border:1px solid var(--border);border-radius:7px;padding:10px 13px;font-size:0.83rem;color:#CDD5E0;line-height:1.5"><b>Justificativa:</b> ${sug.justificativa}</div>`;
+  qid('aprv-obs').value='';
+  openModal('modal-aprv');
+}
+
+function decidir(aprovar){
+  const sugs=getSugs(), sug=sugs.find(s=>s.id===currentSugId);
+  if(!sug) return;
+  sug.status=aprovar?'aprovado':'rejeitado';
+  sug.obsRT=qid('aprv-obs').value.trim();
+  sug.dtDecisao=nowStr();
+  sug.decididoPor=CU.nome;
+  setSugs(sugs);
+  if(aprovar){
+    if(sug.tipo==='estoque'||sug.tipo==='ambos'){
+      const stock=getStock();
+      if(!stock.find(s=>s.name===sug.nome)){stock.push({id:'stk_'+uid(),name:sug.nome,cat:sug.categoria,qty:0,min:1,unit:'un'});setStock(stock)}
+    }
+    if(sug.tipo==='checklist'||sug.tipo==='ambos'){
+      const extras=getExtras();
+      if(!extras.find(e=>e.nome===sug.nome)){extras.push({id:'ext_'+uid(),nome:sug.nome,categoria:sug.categoria,tipo:sug.tipo});setExtras(extras);renderExtraItems()}
+    }
+  }
+  closeModal('modal-aprv');
+  renderAprovacoes(); renderStock(); refreshBadge();
+  showToast(aprovar?`✅ "${sug.nome}" aprovado!`:`❌ "${sug.nome}" rejeitado.`);
+}
+
+// ═══════ ALTERAÇÕES ═══════
+function submitAlt(){
+  const amb=qs('input[name="alt_amb"]:checked'), tipo=qs('input[name="alt_tipo"]:checked');
+  const desc=qid('alt-desc').value.trim(), resp=qid('alt-resp').value.trim();
+  if(!amb||!tipo||!desc||!resp){showToast('❌ Preencha: Ambulância, Tipo, Descrição e Responsável.');return}
+  const ambObj=getAmb(amb.value)||{prefixo:amb.value,placa:'—'};
+  const rec={id:'ALT-'+uid(),dt:nowStr(),data:qid('alt-data').value,amb:`${ambObj.prefixo} (${ambObj.placa})`,tipo:tipo.value,grav:gR('alt_grav'),desc,resp,status:gR('alt_status')||'Pendente',custo:qid('alt-custo').value||'0',usuario:CU.nome};
+  const alts=getAlts(); alts.unshift(rec); setAlts(alts);
+  sendToDrive({type:'alteracao',row:Object.values(rec)});
+  qid('alt-desc').value=''; qid('alt-resp').value=''; qid('alt-custo').value='';
+  renderAlts(); renderDashboard(); showToast('✅ Alteração registrada!');
+}
+
+function renderAlts(){
+  const tbody=qid('alt-tbody'); if(!tbody) return;
+  const alts=getAlts();
+  if(!alts.length){tbody.innerHTML='<tr><td colspan="8" class="empty">Nenhuma alteração.</td></tr>';return}
+  const gc={Leve:'b-ok',Moderada:'b-ye',Grave:'b-nok'};
+  const sc={'Pendente':'b-nok','Em Andamento':'b-ye','Resolvido':'b-ok'};
+  tbody.innerHTML=alts.map(r=>`<tr>
+    <td>${r.data||'—'}</td><td><span class="badge b-info">${r.amb}</span></td><td>${r.tipo}</td>
+    <td><span class="badge ${gc[r.grav]||'b-gray'}">${r.grav||'—'}</span></td>
+    <td style="max-width:180px">${r.desc}</td><td>${r.resp}</td>
+    <td><span class="badge ${sc[r.status]||'b-gray'}">${r.status}</span></td>
+    <td>${r.custo&&r.custo!='0'?'R$ '+parseFloat(r.custo).toFixed(2):'—'}</td>
+  </tr>`).join('');
+}
+
+// ═══════ ESTOQUE ═══════
+function renderStock(){
+  const grid=qid('stock-grid'); if(!grid) return;
+  const stock=getStock();
+  const low=stock.filter(i=>i.qty<=i.min);
+  const la=qid('low-alert'), lt=qid('low-txt');
+  if(low.length){la.style.display='flex';lt.textContent=`${low.length} item(ns) com estoque baixo: ${low.map(i=>i.name).join(', ')}`}
+  else la.style.display='none';
+  qid('items-dl').innerHTML=stock.map(i=>`<option value="${i.name}">`).join('');
+  const cats=[...new Set(stock.map(i=>i.cat))];
+  grid.innerHTML='';
+  cats.forEach(cat=>{
+    const h=document.createElement('div'); h.style.cssText='grid-column:1/-1';
+    h.innerHTML=`<div class="sec-t">${cat}</div>`; grid.appendChild(h);
+    stock.filter(i=>i.cat===cat).forEach(item=>{
+      const isLow=item.qty<=item.min;
+      const d=document.createElement('div'); d.className='stk '+(isLow?'low':'');
+      d.innerHTML=`${isLow?'<span class="low-b">BAIXO</span>':''}
+        <div class="stk-name">${item.name}</div><div class="stk-cat">${item.cat}</div>
+        <div class="stk-qty">
+          <button class="qty-btn" onclick="chgQty('${item.id}',-1)">−</button>
+          <span class="qty-val" id="qty-${item.id}">${item.qty}</span>
+          <span class="qty-unit">${item.unit}</span>
+          <button class="qty-btn" onclick="chgQty('${item.id}',1)">+</button>
+        </div><div class="stk-min">Mín: ${item.min} ${item.unit}</div>`;
+      grid.appendChild(d);
+    });
+  });
+}
+
+function chgQty(id,d){const s=getStock(),i=s.find(x=>x.id===id);if(!i)return;i.qty=Math.max(0,i.qty+d);setStock(s);renderStock()}
+
+function submitUso(){
+  const item=qid('uso-item').value.trim(), qtd=parseInt(qid('uso-qtd').value)||0;
+  if(!item||qtd<1){showToast('❌ Informe item e quantidade.');return}
+  const stock=getStock(), si=stock.find(i=>i.name===item);
+  if(si){if(si.qty<qtd&&!confirm(`Estoque insuficiente (${si.qty}). Continuar?`))return;si.qty=Math.max(0,si.qty-qtd);setStock(stock)}
+  const amb=qs('input[name="uso_amb"]:checked');
+  const ambObj=amb?getAmb(amb.value)||{prefixo:amb.value,placa:'—'}:{prefixo:'—',placa:'—'};
+  const rec={id:'USO-'+uid(),dt:qid('uso-dt').value||nowStr(),amb:`${ambObj.prefixo} (${ambObj.placa})`,item,qtd,pac:qid('uso-pac').value,resp:qid('uso-resp').value,obs:qid('uso-obs').value,usuario:CU.nome};
+  const usos=getUsos(); usos.unshift(rec); setUsos(usos);
+  sendToDrive({type:'uso',row:Object.values(rec)});
+  ['uso-item','uso-qtd','uso-pac','uso-resp','uso-obs'].forEach(id=>{const e=qid(id);if(e)e.value=''});
+  renderStock(); renderUso(); renderDashboard(); showToast(`✅ Uso de ${qtd}x ${item} registrado!`);
+}
+
+function renderUso(){
+  const tbody=qid('uso-tbody'); if(!tbody) return;
+  const usos=getUsos();
+  if(!usos.length){tbody.innerHTML='<tr><td colspan="6" class="empty">Nenhum uso registrado.</td></tr>';return}
+  tbody.innerHTML=usos.map(r=>`<tr>
+    <td style="font-size:0.78rem">${r.dt}</td><td><span class="badge b-pu">${r.amb}</span></td>
+    <td><b>${r.item}</b></td><td><span class="badge b-info">${r.qtd}</span></td>
+    <td>${r.pac||'—'}</td><td>${r.resp||'—'}</td>
+  </tr>`).join('');
+}
+
+// ═══════ USUÁRIOS ═══════
+function addUser(){
+  const nome=qid('nu-nome').value.trim(), email=qid('nu-email').value.trim();
+  const senha=qid('nu-senha').value, role=qid('nu-func').value;
+  if(!nome||!email||!senha){showToast('❌ Preencha nome, e-mail e senha.');return}
+  if(senha.length<6){showToast('❌ Senha mínima 6 caracteres.');return}
+  const users=getUsers();
+  if(users.find(u=>u.email===email)){showToast('❌ E-mail já cadastrado.');return}
+  users.push({id:'u_'+uid(),nome,email,senha,role,companyId:cid(),criado:nowStr()});
+  setUsers(users); closeModal('modal-user'); renderUsers(); renderAmbs();
+  showToast('✅ Usuário adicionado!'); initConfig();
+}
+
+function renderUsers(){
+  const tbody=qid('users-tbody'); if(!tbody) return;
+  const users=getUsers();
+  if(!users.length){tbody.innerHTML='<tr><td colspan="5" class="empty">Nenhum usuário.</td></tr>';return}
+  const rc={Administrador:'rp-admin',RT:'rp-rt',Condutor:'rp-func',Técnico:'rp-func'};
+  tbody.innerHTML=users.map(u=>`<tr>
+    <td><b>${u.nome}</b></td><td>${u.email}</td>
+    <td><span class="rp ${rc[u.role]||'rp-func'}">${ROLE_LABEL[u.role]||u.role}</span></td>
+    <td style="font-size:0.75rem">${u.criado||'—'}</td>
+    <td><button class="btn danger sm" onclick="removeUser('${u.id}')">Remover</button></td>
+  </tr>`).join('');
+}
+
+function removeUser(id){
+  if(!confirm('Remover este usuário?')) return;
+  setUsers(getUsers().filter(u=>u.id!==id)); renderUsers(); showToast('✅ Usuário removido.');
+}
+
+// ═══════ DASHBOARD ═══════
+function renderDashboard(){
+  if(CU.role==='superadmin'){renderSuperAdmin();return}
+  const mes=new Date().getMonth();
+  const chkMes=getChks().filter(c=>{try{return new Date(c.data).getMonth()===mes}catch{return true}});
+  const low=getStock().filter(i=>i.qty<=i.min).length;
+  const pend=pendingSugs();
+  const statsEl=qid('dash-stats');
+  statsEl.innerHTML=`
+    <div class="stat red"><div class="stat-icon">📋</div><div class="stat-val">${chkMes.length}</div><div class="stat-label">Checklists este mês</div></div>
+    <div class="stat blue"><div class="stat-icon">🔧</div><div class="stat-val">${getAlts().length}</div><div class="stat-label">Alterações</div></div>
+    <div class="stat yellow"><div class="stat-icon">⚠️</div><div class="stat-val">${low}</div><div class="stat-label">Estoque baixo</div></div>
+    <div class="stat ${pend?'yellow':'green'}"><div class="stat-icon">⏳</div><div class="stat-val">${pend}</div><div class="stat-label">Sugestões pendentes</div></div>`;
+  const chks=getChks(), tbody=qid('dash-chk-tb');
+  if(!chks.length){tbody.innerHTML='<tr><td colspan="5" class="empty">Nenhum checklist ainda.</td></tr>'}
+  else{tbody.innerHTML=chks.slice(0,5).map(c=>{
+    const hasNok=[c.m_agua,c.m_oleo,c.m_freios,c.m_hidraulica,c.m_motor_geral,c.m_ac_cabine,c.m_ac_salao,c.ac_extintor_g,c.ac_extintor_m,...EL_ITEMS.map(([n])=>c[n])].some(v=>BAD.has(v));
+    return`<tr><td style="font-size:0.78rem">${c.dt}</td><td><span class="badge b-info">${c.amb}</span></td><td>${c.condutor}</td><td>${c.turno}</td><td><span class="badge ${hasNok?'b-nok':'b-ok'}">${hasNok?'⚠ Problemas':'✔ OK'}</span></td></tr>`;
+  }).join('')}
+  // Escala de hoje
+  const hojeDiv=qid('dash-hoje');
+  if(hojeDiv) hojeDiv.innerHTML=escalaHojeHTML();
+  const ac=qid('dash-alerts');
+  const lowItems=getStock().filter(i=>i.qty<=i.min);
+  if(!lowItems.length){if(ac)ac.innerHTML='';return}
+  if(ac)ac.innerHTML=`<div class="card"><div class="ch"><div class="ch-icon" style="background:#92400E">⚠️</div><div class="ch-title">Alertas de Estoque</div></div><div class="cb">${lowItems.map(i=>`<div class="alert red">⚠️ <b>${i.name}</b>: ${i.qty} ${i.unit} (mín: ${i.min})</div>`).join('')}</div></div>`;
+}
+
+// ═══════ SUPER ADMIN ═══════
+function renderSuperAdmin(){
+  const cos=getAllCos();
+  const totalU=cos.reduce((s,co)=>s+(DB.getC(co.id,'users')||[]).length,0);
+  const totalC=cos.reduce((s,co)=>s+(DB.getC(co.id,'checklists')||[]).length,0);
+  qid('super-stats').innerHTML=`
+    <div class="stat purple"><div class="stat-icon">🏢</div><div class="stat-val">${cos.length}</div><div class="stat-label">Empresas</div></div>
+    <div class="stat blue"><div class="stat-icon">👥</div><div class="stat-val">${totalU}</div><div class="stat-label">Usuários totais</div></div>
+    <div class="stat red"><div class="stat-icon">📋</div><div class="stat-val">${totalC}</div><div class="stat-label">Checklists totais</div></div>
+    <div class="stat green"><div class="stat-icon">💰</div><div class="stat-val">${cos.length}</div><div class="stat-label">Clientes ativos</div></div>`;
+  const tbody=qid('super-tb');
+  if(!cos.length){tbody.innerHTML='<tr><td colspan="7" class="empty">Nenhuma empresa.</td></tr>';return}
+  const planoC={Básico:'b-gray',Padrão:'b-info',Premium:'b-pu'};
+  tbody.innerHTML=cos.map(co=>{
+    const users=DB.getC(co.id,'users')||[];
+    const admin=users.find(u=>u.role==='Administrador')||users[0]||{};
+    return`<tr>
+      <td><b>${co.nome}</b></td><td>${admin.nome||'—'}</td>
+      <td><span class="badge ${planoC[co.plano]||'b-gray'}">${co.plano}</span></td>
+      <td>${users.length}</td><td>${(DB.getC(co.id,'ambs')||[]).length}</td>
+      <td>${(DB.getC(co.id,'checklists')||[]).length}</td>
+      <td style="font-size:0.75rem">${co.criado||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════ CONFIG ═══════
+function initConfig(){
+  if(!CU||CU.role==='superadmin') return;
+  const cfg=getCfg(), cos=getAllCos(), co=cos.find(c=>c.id===cid())||{};
+  const ce=qid('cfg-empresa'); if(ce) ce.value=cfg.empresa||CU.empresa||'';
+  const cp=qid('cfg-plano'); if(cp) cp.value=CU.companyPlano||co.plano||'Padrão';
+  const cg=qid('cfg-gas'); if(cg) cg.value=cfg.gas_url||'';
+  const sel=qid('cfg-rt');
+  if(sel){
+    sel.innerHTML='<option value="">Selecione o RT da empresa...</option>';
+    getRTs().forEach(u=>sel.innerHTML+=`<option value="${u.id}"${u.id===cfg.rtPrincipal?' selected':''}>${u.nome} (${u.role})</option>`);
+  }
+}
+
+function salvarConfig(){
+  const cfg=getCfg();
+  cfg.empresa=qid('cfg-empresa').value.trim();
+  cfg.rtPrincipal=qid('cfg-rt').value;
+  setCfg(cfg);
+  const cos=getAllCos(), idx=cos.findIndex(c=>c.id===cid());
+  if(idx>=0){cos[idx].nome=cfg.empresa||cos[idx].nome; setAllCos(cos)}
+  qid('topbar-co').textContent=cfg.empresa||CU.empresa;
+  qid('sb-co').textContent=cfg.empresa||CU.empresa;
+  showToast('✅ Configurações salvas!');
+}
+
+function salvarGAS(){
+  const cfg=getCfg(); cfg.gas_url=qid('cfg-gas').value.trim(); setCfg(cfg);
+  showToast('✅ URL do Drive salva!');
+}
+
+// ═══════ DRIVE ═══════
+async function sendToDrive(payload){
+  const cfg=getCfg(); if(!cfg.gas_url) return;
+  try{await fetch(cfg.gas_url,{method:'POST',body:JSON.stringify(payload),headers:{'Content-Type':'application/json'}})}catch(e){}
+}
+
+// ═══════ INIT ═══════
+function initDateTime(){
+  const dv=qid('data-v'); if(dv) dv.value=nowDate();
+  const h=qid('horario'); if(h) h.value=nowTime();
+  const ad=qid('alt-data'); if(ad) ad.value=nowDate();
+  const ud=qid('uso-dt'); if(ud) ud.value=nowDT();
+  document.querySelectorAll('.fi.t').forEach(el=>el.addEventListener('input',upd));
+}
+
+// ═══════ AUTO LOGIN ═══════
+(function(){
+  const session=DB.get('session');
+  if(!session||!session.email) return;
+  if(session.role==='superadmin'){loginOk(SUPER);return}
+  for(const co of getAllCos()){
+    const u=(DB.getC(co.id,'users')||[]).find(x=>x.id===session.id&&x.email===session.email);
+    if(u){loginOk({...u,companyId:co.id,empresa:co.nome,companyPlano:co.plano});return}
+  }
+})();
+
+// ════════════════════════════════════════
+//  ESCALAS
+// ════════════════════════════════════════
+function fmtDate(d){ return d instanceof Date ? d.toISOString().slice(0,10) : d; }
+
+function getWeekDays(offset){
+  const today=new Date();
+  const day=today.getDay();
+  const mon=new Date(today);
+  mon.setDate(today.getDate()-(day===0?6:day-1)+offset*7);
+  return Array.from({length:7},(_,i)=>{ const d=new Date(mon); d.setDate(mon.getDate()+i); return d; });
+}
+
+function escMover(delta){ escOffset+=delta; renderEscalaCalendar(); }
+
+function buildEscAmbSelect(){
+  const sel=qid('esc-amb'); if(!sel) return;
+  const ambs=getAmbs();
+  sel.innerHTML='<option value="">Selecione a ambulância...</option>';
+  ambs.forEach(a=>{
+    const t=TIPOS[a.tipo]||{icon:'🚑'};
+    sel.innerHTML+=`<option value="${a.id}">${t.icon} ${a.prefixo} (${a.placa}) — ${a.tipo||'?'}</option>`;
+  });
+}
+
+function preencherEquipeEscala(){
+  const ambId=qid('esc-amb').value;
+  const amb=getAmb(ambId);
+  const list=qid('esc-equipe-list');
+  list.innerHTML=''; eqCounter=0;
+  if(amb&&amb.equipe&&amb.equipe.length){
+    amb.equipe.forEach(e=>addEscFuncRow(e.cargo,e.userId));
+  }
+}
+
+function addEscFunc(){ addEscFuncRow('',''); }
+
+function addEscFuncRow(cargo,userId){
+  const users=getUsers();
+  const id='ef_'+(++eqCounter);
+  const div=document.createElement('div');
+  div.id=id; div.className='eq-row';
+  div.innerHTML=`
+    <input class="fi" type="text" placeholder="Cargo / Função" value="${cargo||''}" style="font-size:0.82rem;padding:7px 10px">
+    <select class="fi" style="font-size:0.82rem;padding:7px 10px">
+      <option value="">Funcionário (opcional)</option>
+      ${users.map(u=>`<option value="${u.id}"${u.id===userId?' selected':''}>${u.nome} (${u.role})</option>`).join('')}
+    </select>
+    <button class="btn danger sm" onclick="qid('${id}').remove()" style="padding:5px 9px;width:32px;justify-content:center">✕</button>`;
+  qid('esc-equipe-list').appendChild(div);
+}
+
+function getEscFuncList(){
+  return Array.from(qid('esc-equipe-list').children).map(row=>{
+    const inputs=row.querySelectorAll('input,select');
+    return {cargo:inputs[0].value.trim(),userId:inputs[1].value};
+  }).filter(e=>e.cargo||e.userId);
+}
+
+function submitEscala(){
+  const ambId=qid('esc-amb').value;
+  const turno=qid('esc-turno').value;
+  const inicio=qid('esc-inicio').value;
+  if(!ambId||!turno||!inicio){showToast('❌ Selecione ambulância, turno e data.');return;}
+  const equipe=getEscFuncList();
+  const amb=getAmb(ambId);
+  const rec={id:'ESC-'+uid(),ambId,turno,inicio,fim:qid('esc-fim').value||inicio,
+    equipe,obs:qid('esc-obs').value.trim(),criado:nowStr(),criadoPor:CU.nome};
+  const esc=getEscalas(); esc.push(rec); setEscalas(esc);
+  qid('esc-amb').value=''; qid('esc-turno').value='';
+  qid('esc-inicio').value=nowDate(); qid('esc-fim').value='';
+  qid('esc-equipe-list').innerHTML=''; qid('esc-obs').value='';
+  renderEscalaCalendar(); renderEscalaTabela();
+  showToast(`✅ Escala registrada para ${amb?amb.prefixo:ambId}!`);
+}
+
+function removeEscala(id){
+  if(!confirm('Remover esta escala?')) return;
+  setEscalas(getEscalas().filter(e=>e.id!==id));
+  renderEscalaCalendar(); renderEscalaTabela();
+  showToast('✅ Escala removida.');
+}
+
+function renderEscalaCalendar(){
+  const days=getWeekDays(escOffset);
+  const lbl=qid('esc-semana-label');
+  if(lbl) lbl.textContent=`${days[0].toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} – ${days[6].toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})}`;
+  const cal=qid('esc-calendar'); if(!cal) return;
+  const ambs=getAmbs();
+  const escalas=getEscalas();
+  const users=getUsers();
+  const hoje=nowDate();
+  if(!ambs.length){cal.innerHTML='<span style="color:var(--muted2);font-size:0.83rem">Nenhuma ambulância cadastrada.</span>';return;}
+  let html=`<table style="width:100%;border-collapse:collapse"><thead><tr>
+    <th class="amb-col">Ambulância</th>
+    ${days.map(d=>{
+      const ds=fmtDate(d);
+      const isT=ds===hoje;
+      return`<th${isT?' class="today"':''} style="min-width:88px">${d.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'})}</th>`;
+    }).join('')}
+  </tr></thead><tbody>`;
+  ambs.forEach(amb=>{
+    const ti=TIPOS[amb.tipo]||{icon:'🚑',cor:'#888',label:'?'};
+    html+=`<tr><td style="padding:8px 10px;border:1px solid var(--border);background:var(--dark3);vertical-align:middle">
+      <b style="font-size:0.82rem">${amb.prefixo}</b><br>
+      <span class="tipo-pill" style="background:${ti.cor}22;border:1px solid ${ti.cor}44;color:${ti.cor};font-size:0.67rem">${ti.icon} ${amb.tipo||'?'}</span>
+    </td>`;
+    days.forEach(d=>{
+      const ds=fmtDate(d);
+      const isT=ds===hoje;
+      const dayEsc=escalas.filter(e=>e.ambId===amb.id&&ds>=e.inicio&&ds<=(e.fim||e.inicio));
+      html+=`<td${isT?' class="today"':''} style="border:1px solid var(--border);vertical-align:top;padding:4px">`;
+      if(dayEsc.length){
+        dayEsc.forEach(e=>{
+          const names=(e.equipe||[]).map(f=>{
+            const u=users.find(x=>x.id===f.userId);
+            return`<div class="esc-block-func">${u?u.nome.split(' ')[0]:f.cargo}</div>`;
+          }).join('');
+          html+=`<div class="esc-block" onclick="removeEscala('${e.id}')">
+            <div class="esc-block-turno">${e.turno.split('(')[0].trim()}</div>
+            ${names}
+            <div class="esc-block-del">✕ remover</div>
+          </div>`;
+        });
+      } else {
+        html+=`<div class="esc-empty">—</div>`;
+      }
+      html+='</td>';
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  cal.innerHTML=html;
+}
+
+function renderEscalaTabela(){
+  const tbody=qid('esc-tbody'); if(!tbody) return;
+  const escalas=getEscalas().sort((a,b)=>b.inicio.localeCompare(a.inicio));
+  const ambs=getAmbs(); const users=getUsers();
+  if(!escalas.length){tbody.innerHTML='<tr><td colspan="7" class="empty">Nenhuma escala cadastrada.</td></tr>';return;}
+  tbody.innerHTML=escalas.map(e=>{
+    const amb=ambs.find(a=>a.id===e.ambId)||{prefixo:e.ambId,tipo:'?'};
+    const ti=TIPOS[amb.tipo]||{icon:'🚑',cor:'#888'};
+    const eq=(e.equipe||[]).map(f=>{
+      const u=users.find(x=>x.id===f.userId);
+      return `${f.cargo}${u?' – '+u.nome.split(' ')[0]:''}`;
+    }).join(' | ')||'—';
+    const per=e.inicio===e.fim||!e.fim?fmtDateBR(e.inicio):`${fmtDateBR(e.inicio)} → ${fmtDateBR(e.fim)}`;
+    return`<tr>
+      <td><b>${amb.prefixo}</b><br><span style="font-size:0.7rem;color:var(--muted)">${amb.placa||''}</span></td>
+      <td>${tipoPill(amb.tipo)}</td>
+      <td><span class="badge b-te">${e.turno}</span></td>
+      <td style="font-size:0.78rem">${per}</td>
+      <td style="font-size:0.78rem;max-width:200px">${eq}</td>
+      <td style="font-size:0.75rem;color:var(--muted)">${e.obs||'—'}</td>
+      <td><button class="btn danger sm" onclick="removeEscala('${e.id}')">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════
+//  MOBILE NAV
+// ═══════════════════════════════════════════
+function toggleMobMenu(){
+  const sb = qid('sidebar');
+  const ov = qid('mob-overlay');
+  sb.classList.toggle('mob-open');
+  ov.classList.toggle('show');
+}
+
+function buildBottomNav(){
+  const nav = qid('bottom-nav');
+  if(!nav) return;
+  if(!CU) { nav.innerHTML=''; return; }
+  // Itens baseados no role
+  let items = [];
+  if(CU.role==='superadmin'){
+    items = [
+      {icon:'🏠',label:'Início',page:'dashboard'},
+      {icon:'🏢',label:'Empresas',page:'empresas'},
+      {icon:'👤',label:'Perfil',page:'perfil'},
+    ];
+  } else if(CU.role==='RT'||CU.role==='Administrador'){
+    items = [
+      {icon:'🏠',label:'Início',page:'dashboard'},
+      {icon:'🚑',label:'Ambulâncias',page:'ambulancias'},
+      {icon:'✓',label:'Checklist',page:'checklist'},
+      {icon:'📦',label:'Estoque',page:'estoque'},
+      {icon:'👥',label:'Equipe',page:'usuarios'},
+    ];
+  } else {
+    items = [
+      {icon:'🏠',label:'Início',page:'dashboard'},
+      {icon:'✓',label:'Checklist',page:'checklist'},
+      {icon:'📦',label:'Estoque',page:'estoque'},
+    ];
+  }
+  const cur = document.querySelector('.page.active')?.id?.replace('pg-','') || 'dashboard';
+  nav.innerHTML = items.map(it=>`
+    <button class="bn-item${it.page===cur?' active':''}" onclick="goPage('${it.page}');closeMobMenu()">
+      <span class="bn-icon">${it.icon}</span>
+      <span>${it.label}</span>
+    </button>`).join('');
+}
+
+function closeMobMenu(){
+  qid('sidebar')?.classList.remove('mob-open');
+  qid('mob-overlay')?.classList.remove('show');
+}
+
+function goPage(page){
+  // Simular clique no item do sidebar correspondente
+  const btns = Array.from(document.querySelectorAll('.sb-item'));
+  const btn = btns.find(b => b.dataset.page === page || b.onclick?.toString().includes(page));
+  if(btn) btn.click();
+  else {
+    // Fallback direto
+    const fnMap = {
+      dashboard: ()=>showPage('pg-dashboard'),
+      ambulancias: ()=>showPage('pg-ambulancias'),
+      checklist: ()=>showPage('pg-checklist'),
+      estoque: ()=>showPage('pg-estoque'),
+      usuarios: ()=>showPage('pg-usuarios'),
+      empresas: ()=>showPage('pg-superadmin'),
+    };
+    if(fnMap[page]) fnMap[page]();
+  }
+  buildBottomNav();
+}
+
+// ═══════════════════════════════════════════
+//  QUILOMETRAGEM
+// ═══════════════════════════════════════════
+window._kmSaidas = [];
+
+function addKmSaida(){
+  const km = qid('km-saida-input').value.trim();
+  if(!km){showToast('❌ Informe o KM da saída.');return;}
+  const hora = qid('km-saida-hora').value || nowTime();
+  const obs  = qid('km-saida-obs').value.trim();
+  window._kmSaidas.push({km, hora, obs});
+  qid('km-saida-input').value='';
+  qid('km-saida-obs').value='';
+  renderKmSaidas();
+}
+
+function renderKmSaidas(){
+  const list = qid('km-saidas-list');
+  if(!list) return;
+  if(!window._kmSaidas.length){
+    list.innerHTML='<span style="color:var(--muted);font-size:0.8rem">Nenhuma saída registrada.</span>';
+    return;
+  }
+  list.innerHTML = window._kmSaidas.map((s,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;background:var(--dark3);border:1px solid var(--border);border-radius:7px;padding:8px 12px">
+      <span style="font-size:0.85rem;font-weight:700;color:var(--text)">🚑 ${Number(s.km).toLocaleString('pt-BR')} km</span>
+      <span class="badge b-info">${s.hora}</span>
+      ${s.obs?`<span style="font-size:0.78rem;color:var(--muted)">${s.obs}</span>`:''}
+      <button class="btn danger sm" onclick="removeKmSaida(${i})" style="margin-left:auto;padding:3px 8px">✕</button>
+    </div>`).join('');
+}
+
+function removeKmSaida(i){
+  window._kmSaidas.splice(i,1);
+  renderKmSaidas();
+}
+
+// Histórico de KM por ambulância (salvo no localStorage)
+function getKmHist(ambId){return DB.getC(cid(),'km_hist_'+ambId)||[];}
+function addKmHist(ambId, rec){
+  const h=getKmHist(ambId);
+  h.unshift(rec);
+  DB.setC(cid(),'km_hist_'+ambId, h.slice(0,60)); // manter 60 registros
+}
+
+// Chamada no submitChecklist para salvar histórico
+function saveKmHist(rec){
+  const ambId = gR('ambulancia');
+  if(!ambId) return;
+  addKmHist(ambId,{
+    id: rec.id,
+    data: rec.data,
+    turno: rec.turno,
+    condutor: rec.condutor,
+    km_inicio: rec.hodometro,
+    km_fim: rec.km_fim,
+    saidas: rec.km_saidas||[],
+    dt: rec.dt
+  });
+}
+
+// ═══════════════════════════════════════════
+//  AUTO LOGIN (session)
+// ═══════════════════════════════════════════
+(function(){
+  const session=DB.get('session');
+  if(!session||!session.email) return;
+  if(session.role==='superadmin'){loginOk(SUPER);return;}
+  for(const co of getAllCos()){
+    const u=(DB.getC(co.id,'users')||[]).find(x=>x.id===session.id&&x.email===session.email);
+    if(u){loginOk({...u,companyId:co.id,empresa:co.nome,companyPlano:co.plano});return;}
+  }
+})();
+</script>
+</body>
+</html>
