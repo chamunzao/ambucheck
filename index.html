@@ -50,6 +50,7 @@ window._fbReady = true;
 window.dispatchEvent(new Event('firebase-ready'));
 console.log('✅ Firebase carregado');
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root{
   --red:#E02020;--red2:#B01010;--red3:#FF4040;
@@ -233,7 +234,32 @@ tbody td{padding:8px 13px;color:#CDD5E0;vertical-align:middle}
 .aprv-desc{font-size:0.83rem;color:var(--muted);margin-bottom:10px;line-height:1.5}
 
 /* STOCK */
-.stock-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.stock-grid{display:flex;flex-direction:column;gap:0}
+.stk-list-sec{font-size:0.62rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);padding:10px 0 4px;border-top:1px solid var(--border);margin-top:4px}
+.stk-list-sec:first-child{border-top:none;margin-top:0;padding-top:0}
+.stk-row{display:grid;grid-template-columns:1fr 90px 120px 110px;align-items:center;padding:7px 4px;border-bottom:1px solid #131825;gap:8px;transition:background 0.1s}
+.stk-row:hover{background:var(--dark3)}
+.stk-row.repor{background:rgba(185,28,28,0.06)}
+.stk-row.baixo{background:rgba(224,32,32,0.04)}
+.stk-row.vencido{background:rgba(124,45,18,0.06)}
+.stk-row-name{font-size:0.82rem;font-weight:500;color:var(--text)}
+.stk-row-name.alerta{color:#FCA5A5}
+.stk-row-qty{display:flex;align-items:center;gap:5px;justify-content:center}
+.stk-row-val{font-size:0.75rem;color:var(--muted)}
+.stk-row-status{font-size:0.7rem;text-align:right}
+.stk-lote{display:grid;grid-template-columns:1fr 80px 120px 90px 28px;align-items:center;padding:5px 4px 5px 28px;border-bottom:1px solid #0d1018;gap:6px;background:rgba(255,255,255,0.01)}
+.stk-lote:hover{background:var(--dark3)}
+.stk-lote-vencido{background:rgba(124,45,18,0.08)}
+.stk-lote-proximo{background:rgba(180,120,0,0.05)}
+.stk-lote-label{font-size:0.75rem;color:var(--muted);font-style:italic}
+.stk-add-lote{font-size:0.72rem;color:var(--blue);cursor:pointer;padding:4px 4px 4px 28px;display:block}
+.stk-add-lote:hover{color:var(--text)}
+.stk-item-header{display:grid;grid-template-columns:1fr 80px 120px 90px 28px;align-items:center;padding:8px 4px 4px;gap:6px;border-bottom:1px solid #1a2030}
+.stk-item-header.repor{background:rgba(185,28,28,0.06)}
+.stk-item-header.vencido{background:rgba(124,45,18,0.06)}
+.stk-item-header.baixo{background:rgba(224,130,0,0.04)}
+.stk-item-name{font-size:0.83rem;font-weight:600;color:var(--text)}
+.stk-item-name.alerta{color:#FCA5A5}
 .stk{background:var(--dark3);border:1px solid var(--border);border-radius:10px;padding:13px;position:relative}
 .stk.low{border-color:rgba(224,32,32,0.35);background:rgba(224,32,32,0.03)}
 .stk-name{font-weight:600;font-size:0.83rem;margin-bottom:2px}
@@ -371,7 +397,7 @@ tbody td{padding:8px 13px;color:#CDD5E0;vertical-align:middle}
     <div class="panel active" id="panel-dashboard">
       <div class="stats" id="dash-stats"></div>
       <div class="card">
-        <div class="ch"><div class="ch-icon" style="background:var(--red)">📋</div><div class="ch-title">Últimos Checklists</div></div>
+        <div class="ch"><div class="ch-icon" style="background:var(--red)">📋</div><div class="ch-title">Últimos Checklists</div><button class="ch-btn" onclick="showRelatorios()">📄 Relatórios</button></div>
         <div class="tbl-wrap"><table>
           <thead><tr><th>Data/Hora</th><th>Ambulância</th><th>Condutor</th><th>Turno</th><th>Status</th></tr></thead>
           <tbody id="dash-chk-tb"></tbody>
@@ -382,13 +408,8 @@ tbody td{padding:8px 13px;color:#CDD5E0;vertical-align:middle}
 
     <!-- CHECKLIST -->
     <div class="panel" id="panel-checklist">
-      <div class="sbar">
-        <div class="si"><div class="dot dot-ok"></div><span id="st-ok">0 OK</span></div>
-        <div class="si"><div class="dot dot-nok"></div><span id="st-nok">0 Problema</span></div>
-        <div class="si"><div class="dot dot-pend"></div><span id="st-pend">0 Pendentes</span></div>
-      </div>
-      <div class="pbar-row"><span class="pbar-label">Progresso</span><div class="pbar"><div class="pfill" id="pfill"></div></div><span class="pcnt" id="pcnt">0/0</span></div>
 
+      <!-- IDENTIFICAÇÃO (todos veem) -->
       <div class="card">
         <div class="ch"><div class="ch-icon" style="background:var(--red)">1</div><div class="ch-title">Identificação</div></div>
         <div class="cb">
@@ -399,7 +420,6 @@ tbody td{padding:8px 13px;color:#CDD5E0;vertical-align:middle}
             <div><div class="fl">Data</div><input class="fi t" type="date" id="data-v"></div>
             <div><div class="fl">Horário</div><input class="fi t" type="time" id="horario"></div>
             <div><div class="fl">Temp. Interna (°C)</div><input class="fi t" type="number" step="0.1" id="temp_int" placeholder="Ex: 22.5"></div>
-            <div><div class="fl">Temp. Externa (°C)</div><input class="fi t" type="number" step="0.1" id="temp_ext" placeholder="Ex: 18.0"></div>
           </div>
           <div><div class="fl">Ambulância <span class="req">*</span></div><div class="rg" id="amb-radios"></div></div>
           <div><div class="fl">Turno <span class="req">*</span></div>
@@ -413,97 +433,159 @@ tbody td{padding:8px 13px;color:#CDD5E0;vertical-align:middle}
         </div>
       </div>
 
-      <div class="card">
-        <div class="ch"><div class="ch-icon" style="background:var(--red)">2</div><div class="ch-title">⛽ Combustível</div></div>
-        <div class="cb"><div class="fg">
-          <label class="fb"><input type="radio" name="combustivel" value="COMPLETO" onchange="upd()"><span>🟢 Completo</span></label>
-          <label class="fb"><input type="radio" name="combustivel" value="3/4" onchange="upd()"><span>🔵 3/4</span></label>
-          <label class="fb"><input type="radio" name="combustivel" value="MEIO" onchange="upd()"><span>🟡 Meio</span></label>
-          <label class="fb"><input type="radio" name="combustivel" value="1/3" onchange="upd()"><span>🟠 1/3</span></label>
-          <label class="fb"><input type="radio" name="combustivel" value="1/4" onchange="upd()"><span>🔴 1/4</span></label>
-          <label class="fb"><input type="radio" name="combustivel" value="RESERVA" onchange="upd()"><span>⚠️ Reserva</span></label>
-        </div></div>
-      </div>
+      <!-- BLOCO CONDUTOR -->
+      <div id="bloco-condutor">
+        <div class="card">
+          <div class="ch"><div class="ch-icon" style="background:var(--red)">2</div><div class="ch-title">⛽ Combustível</div></div>
+          <div class="cb"><div class="fg">
+            <label class="fb"><input type="radio" name="combustivel" value="COMPLETO" onchange="upd()"><span>🟢 Completo</span></label>
+            <label class="fb"><input type="radio" name="combustivel" value="3/4" onchange="upd()"><span>🟡 3/4</span></label>
+            <label class="fb"><input type="radio" name="combustivel" value="MEIO" onchange="upd()"><span>🟡 Meio</span></label>
+            <label class="fb"><input type="radio" name="combustivel" value="1/3" onchange="upd()"><span>🟠 1/3</span></label>
+            <label class="fb"><input type="radio" name="combustivel" value="RESERVA" onchange="upd()"><span>🔴 Reserva</span></label>
+          </div></div>
+        </div>
 
-      <div class="card">
-        <div class="ch"><div class="ch-icon" style="background:var(--red)">3</div><div class="ch-title">🔧 Motor</div></div>
-        <div class="cb"><div class="gt">
-          <div class="gh" style="grid-template-columns:1fr 90px 90px"><span>Item</span><span>Normal</span><span>Baixo</span></div>
-          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Água (arrefecimento)</span><label class="gra ok"><input type="radio" name="m_agua" value="NORMAL" onchange="upd()"><span>Normal</span></label><label class="gra nok"><input type="radio" name="m_agua" value="BAIXO" onchange="upd()"><span>Baixo</span></label></div>
-          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Óleo do motor</span><label class="gra ok"><input type="radio" name="m_oleo" value="NORMAL" onchange="upd()"><span>Normal</span></label><label class="gra nok"><input type="radio" name="m_oleo" value="BAIXO" onchange="upd()"><span>Baixo</span></label></div>
-          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Fluido de freios</span><label class="gra ok"><input type="radio" name="m_freios" value="NORMAL" onchange="upd()"><span>Normal</span></label><label class="gra nok"><input type="radio" name="m_freios" value="BAIXO" onchange="upd()"><span>Baixo</span></label></div>
-          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Fluido D. Hidráulica</span><label class="gra ok"><input type="radio" name="m_hidraulica" value="NORMAL" onchange="upd()"><span>Normal</span></label><label class="gra nok"><input type="radio" name="m_hidraulica" value="BAIXO" onchange="upd()"><span>Baixo</span></label></div>
-          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Func. Geral do Motor</span><label class="gra ok"><input type="radio" name="m_motor_geral" value="NORMAL" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="m_motor_geral" value="BAIXO" onchange="upd()"><span>Falha</span></label></div>
-          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Ar-condicionado Cabine</span><label class="gra ok"><input type="radio" name="m_ac_cabine" value="NORMAL" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="m_ac_cabine" value="BAIXO" onchange="upd()"><span>Falha</span></label></div>
-          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Ar-condicionado Salão</span><label class="gra ok"><input type="radio" name="m_ac_salao" value="NORMAL" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="m_ac_salao" value="BAIXO" onchange="upd()"><span>Falha</span></label></div>
-        </div></div>
-      </div>
+        <div class="card">
+          <div class="ch"><div class="ch-icon" style="background:var(--red)">3</div><div class="ch-title">🔧 Motor</div></div>
+          <div class="cb"><div class="gt">
+            <div class="gh" style="grid-template-columns:1fr 90px 90px"><span>Item</span><span>Normal</span><span>Baixo</span></div>
+            <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Água (arrefecimento)</span><label class="gra ok"><input type="radio" name="m_agua" value="NORMAL" onchange="upd()"><span>Normal</span></label><label class="gra nok"><input type="radio" name="m_agua" value="BAIXO" onchange="upd()"><span>Baixo</span></label></div>
+            <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Óleo do motor</span><label class="gra ok"><input type="radio" name="m_oleo" value="NORMAL" onchange="upd()"><span>Normal</span></label><label class="gra nok"><input type="radio" name="m_oleo" value="BAIXO" onchange="upd()"><span>Baixo</span></label></div>
+            <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Fluido de freios</span><label class="gra ok"><input type="radio" name="m_freios" value="NORMAL" onchange="upd()"><span>Normal</span></label><label class="gra nok"><input type="radio" name="m_freios" value="BAIXO" onchange="upd()"><span>Baixo</span></label></div>
+          </div></div>
+        </div>
 
-      <div class="card">
-        <div class="ch"><div class="ch-icon" style="background:var(--red)">4</div><div class="ch-title">💡 Sistema Elétrico</div></div>
-        <div class="cb"><div class="gt">
-          <div class="gh" style="grid-template-columns:1fr 90px 90px"><span>Item</span><span>Presente</span><span>Ausente</span></div>
-          <div id="el-rows"></div>
-        </div></div>
-      </div>
+        <div class="card">
+          <div class="ch"><div class="ch-icon" style="background:var(--red)">4</div><div class="ch-title">⚡ Sistema Elétrico</div></div>
+          <div class="cb"><div class="gt">
+            <div class="gh" style="grid-template-columns:1fr 90px 90px"><span>Item</span><span>Presente</span><span>Ausente</span></div>
+            <div id="el-rows"></div>
+          </div></div>
+        </div>
 
-      <div class="card">
-        <div class="ch"><div class="ch-icon" style="background:var(--red)">5</div><div class="ch-title">🫁 Oxigênios</div></div>
-        <div class="cb"><div class="r3">
-          <div><div class="fl">Cilindro 01 <span class="req">*</span></div><input class="fi t" type="text" id="cil01" placeholder="Ex: 150 kgf"></div>
-          <div><div class="fl">Cilindro 02</div><input class="fi t" type="text" id="cil02" placeholder="Ex: 80 kgf"></div>
-          <div><div class="fl">Cilindro Pequeno</div><input class="fi t" type="text" id="cil03" placeholder="Ex: 200 kgf"></div>
-        </div></div>
-      </div>
+        <div class="card">
+          <div class="ch"><div class="ch-icon" style="background:var(--red)">5</div><div class="ch-title">🫁 Oxigênios</div></div>
+          <div class="cb"><div class="r3">
+            <div><div class="fl">Cilindro 01 <span class="req">*</span></div><input class="fi t" type="text" id="cil01" placeholder="Ex: 150 kgf"></div>
+            <div><div class="fl">Cilindro 02</div><input class="fi t" type="text" id="cil02" placeholder="Ex: 80 kgf"></div>
+            <div><div class="fl">Cilindro Pequeno</div><input class="fi t" type="text" id="cil03" placeholder="Ex: 200 kgf"></div>
+          </div></div>
+        </div>
 
-      <div class="card" id="extra-card">
-        <div class="ch"><div class="ch-icon" style="background:var(--green2)">✚</div><div class="ch-title">Itens Adicionais Aprovados</div></div>
-        <div class="cb" id="extra-body"><span style="color:var(--muted);font-size:0.83rem">Nenhum item adicional aprovado ainda.</span></div>
-      </div>
-
-      <div class="card">
-        <div class="ch"><div class="ch-icon" style="background:var(--red)">6</div><div class="ch-title">⚙️ Pneus, Limpeza & Intercorrências</div></div>
-        <div class="cb">
-          <div class="sec-t">Quilometragem das Saídas</div>
-          <div id="km-saidas-list" style="display:flex;flex-direction:column;gap:8px"></div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input class="fi" type="number" id="km-saida-input" placeholder="KM da saída" style="flex:1">
-            <input class="fi" type="time" id="km-saida-hora" style="width:110px">
-            <input class="fi" type="text" id="km-saida-obs" placeholder="Obs (opcional)" style="flex:1">
-            <button class="btn ghost" onclick="addKmSaida()" style="white-space:nowrap">+ Saída</button>
+        <div class="card">
+          <div class="ch"><div class="ch-icon" style="background:var(--red)">6</div><div class="ch-title">🚗 Pneus, Limpeza & KM Saídas</div></div>
+          <div class="cb">
+            <div class="sec-t">Quilometragem das Saídas</div>
+            <div id="km-saidas-list" style="display:flex;flex-direction:column;gap:8px"></div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input class="fi" type="number" id="km-saida-input" placeholder="KM da saída" style="flex:1">
+              <input class="fi" type="time" id="km-saida-hora" style="width:110px">
+              <input class="fi" type="text" id="km-saida-obs" placeholder="Obs (opcional)" style="flex:1">
+              <button class="btn ghost" onclick="addKmSaida()" style="white-space:nowrap">+ Saída</button>
+            </div>
+            <div><div class="fl">Pneus calibrados?</div>
+              <div class="rg"><label class="rb"><input type="radio" name="pneus" value="SIM" onchange="upd()"><span>✔ Sim</span></label><label class="rb"><input type="radio" name="pneus" value="NAO" onchange="upd()"><span>✘ Não</span></label></div>
+            </div>
+            <div class="r2">
+              <div><div class="fl">Limpeza Interna</div><div class="rg"><label class="rb"><input type="radio" name="limp_int" value="LIMPA" onchange="upd()"><span>✔ Limpa</span></label><label class="rb"><input type="radio" name="limp_int" value="NAO_LIMPA" onchange="upd()"><span>✘ Não Limpa</span></label></div></div>
+              <div><div class="fl">Limpeza Externa</div><div class="rg"><label class="rb"><input type="radio" name="limp_ext" value="LIMPA" onchange="upd()"><span>✔ Limpa</span></label><label class="rb"><input type="radio" name="limp_ext" value="NAO_LIMPA" onchange="upd()"><span>✘ Não Limpa</span></label></div></div>
+            </div>
+            <div><div class="fl">Intercorrências</div><textarea class="fta" id="intercorrencias" placeholder="Descreva intercorrências..."></textarea></div>
           </div>
-
-          <div><div class="fl">Pneus calibrados?</div>
-            <div class="rg"><label class="rb"><input type="radio" name="pneus" value="SIM" onchange="upd()"><span>✔ Sim</span></label><label class="rb"><input type="radio" name="pneus" value="NAO" onchange="upd()"><span>✘ Não</span></label></div>
-          </div>
-          <div class="r2">
-            <div><div class="fl">Limpeza Interna</div><div class="rg"><label class="rb"><input type="radio" name="limp_int" value="LIMPA" onchange="upd()"><span>✔ Limpa</span></label><label class="rb"><input type="radio" name="limp_int" value="NAO_LIMPA" onchange="upd()"><span>✘ Não Limpa</span></label></div></div>
-            <div><div class="fl">Limpeza Externa</div><div class="rg"><label class="rb"><input type="radio" name="limp_ext" value="LIMPA" onchange="upd()"><span>✔ Limpa</span></label><label class="rb"><input type="radio" name="limp_ext" value="NAO_LIMPA" onchange="upd()"><span>✘ Não Limpa</span></label></div></div>
-          </div>
-          <div><div class="fl">Intercorrências</div><textarea class="fta" id="intercorrencias" placeholder="Descreva intercorrências..."></textarea></div>
         </div>
       </div>
-      <div class="card">
-        <div class="ch"><div class="ch-icon" style="background:var(--red)">7</div><div class="ch-title">🔩 Acessórios em Geral</div></div>
-        <div class="cb"><div class="gt">
-          <div class="gh" style="grid-template-columns:1fr 90px 90px"><span>Item</span><span>OK</span><span>Falha/Ausente</span></div>
-          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Lente Retrovisor Direito</span><label class="gra ok"><input type="radio" name="ac_retro_d" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_retro_d" value="AUSENTE" onchange="upd()"><span>Falha</span></label></div>
-          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Lente Retrovisor Esquerdo</span><label class="gra ok"><input type="radio" name="ac_retro_e" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_retro_e" value="AUSENTE" onchange="upd()"><span>Falha</span></label></div>
-          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Estepe</span><label class="gra ok"><input type="radio" name="ac_estepe" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_estepe" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
-          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Chave de Roda</span><label class="gra ok"><input type="radio" name="ac_chave_roda" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_chave_roda" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
-          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Triângulo</span><label class="gra ok"><input type="radio" name="ac_triangulo" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_triangulo" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
-          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Macaco</span><label class="gra ok"><input type="radio" name="ac_macaco" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_macaco" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
-          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Bancos (Danos)</span><label class="gra ok"><input type="radio" name="ac_bancos" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_bancos" value="AUSENTE" onchange="upd()"><span>Com Dano</span></label></div>
-          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Tapetes</span><label class="gra ok"><input type="radio" name="ac_tapetes" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_tapetes" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
-          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Documentos do Veículo</span><label class="gra ok"><input type="radio" name="ac_docs" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_docs" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
-          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Rádio Base</span><label class="gra ok"><input type="radio" name="ac_radio" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_radio" value="AUSENTE" onchange="upd()"><span>Falha</span></label></div>
-          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Extintor Cabine Geral</span><label class="gra ok"><input type="radio" name="ac_extintor_g" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_extintor_g" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
-          <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Extintor Cabine Motorista</span><label class="gra ok"><input type="radio" name="ac_extintor_m" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_extintor_m" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
-        </div></div>
+
+      <!-- BLOCO ENFERMEIRO: MEDICAÇÃO AVANÇADA (diária/mensal) -->
+      <div id="bloco-enfermeiro-med" style="display:none">
+        <div class="card">
+          <div class="ch"><div class="ch-icon" style="background:#7C3AED">💊</div><div class="ch-title">Medicação Avançada</div><div id="enf-motivo-badge" class="badge b-pu" style="margin-left:auto">Mensal</div></div>
+          <div class="cb">
+            <div class="fl">Motivo</div>
+            <div class="rg" style="margin-bottom:12px">
+              <label class="rb"><input type="radio" name="enf_motivo" value="MEDICACOES_USADA" onchange="upd()"><span>📋 Medicações Usadas</span></label>
+              <label class="rb"><input type="radio" name="enf_motivo" value="CHECK_LIST_MENSAL" onchange="upd()"><span>📅 Check List Mensal</span></label>
+            </div>
+            <div class="fl">Lacre Novo <span class="req">*</span></div>
+            <input class="fi" type="text" id="enf_lacre_novo" placeholder="Número do lacre" style="margin-bottom:12px">
+            <div class="gt" id="enf-med-grid">
+              <div class="gh" style="grid-template-columns:40px 1fr 70px 110px 90px"><span title="Confirmar OK">✓</span><span>Medicamento</span><span>Qtd</span><span>Validade</span><span>Situação</span></div>
+              <div id="enf-med-rows"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BLOCO ENFERMEIRO: SEMANAL AVANÇADO -->
+      <div id="bloco-enfermeiro-semanal" style="display:none">
+        <div class="card">
+          <div class="ch"><div class="ch-icon" style="background:#7C3AED">📦</div><div class="ch-title">Check List Semanal Avançado</div></div>
+          <div class="cb">
+            <div class="fl">Semana</div>
+            <div class="rg" style="margin-bottom:12px">
+              <label class="rb"><input type="radio" name="enf_semana" value="1" onchange="upd()"><span>1ª</span></label>
+              <label class="rb"><input type="radio" name="enf_semana" value="2" onchange="upd()"><span>2ª</span></label>
+              <label class="rb"><input type="radio" name="enf_semana" value="3" onchange="upd()"><span>3ª</span></label>
+              <label class="rb"><input type="radio" name="enf_semana" value="4" onchange="upd()"><span>4ª</span></label>
+              <label class="rb"><input type="radio" name="enf_semana" value="5" onchange="upd()"><span>5ª</span></label>
+            </div>
+            <div id="enf-semanal-sections"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BLOCO TÉCNICO: MEDICAÇÃO BÁSICA -->
+      <div id="bloco-tecnico-med" style="display:none">
+        <div class="card">
+          <div class="ch"><div class="ch-icon" style="background:#2563EB">💉</div><div class="ch-title">Medicação Básica</div></div>
+          <div class="cb">
+            <div class="fl">Motivo</div>
+            <div class="rg" style="margin-bottom:12px">
+              <label class="rb"><input type="radio" name="tec_motivo" value="MEDICACOES_USADA" onchange="upd()"><span>📋 Medicações Prescritas Usadas</span></label>
+              <label class="rb"><input type="radio" name="tec_motivo" value="CHECK_LIST_MENSAL" onchange="upd()"><span>📅 Check List Mensal</span></label>
+            </div>
+            <div class="r2" style="margin-bottom:12px">
+              <div><div class="fl">Lacre Antigo</div><input class="fi" type="text" id="tec_lacre_antigo" placeholder="Número"></div>
+              <div><div class="fl">Lacre Novo <span class="req">*</span></div><input class="fi" type="text" id="tec_lacre_novo" placeholder="Número"></div>
+            </div>
+            <div class="gt">
+              <div class="gh" style="grid-template-columns:40px 1fr 70px 110px 90px"><span title="Confirmar OK">✓</span><span>Medicamento</span><span>Qtd</span><span>Validade</span><span>Situação</span></div>
+              <div id="tec-med-rows"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACESSÓRIOS (todos ou só RT conforme config) -->
+      <div id="bloco-acessorios">
+        <div class="card" id="extra-card">
+          <div class="ch"><div class="ch-icon" style="background:var(--green2)">✓</div><div class="ch-title">Itens Adicionais Aprovados</div></div>
+          <div class="cb" id="extra-body"><span style="color:var(--muted);font-size:0.83rem">Nenhum item adicional aprovado ainda.</span></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ch-icon" style="background:var(--red)">7</div><div class="ch-title">🧰 Acessórios em Geral</div></div>
+          <div class="cb"><div class="gt">
+            <div class="gh" style="grid-template-columns:1fr 90px 90px"><span>Item</span><span>OK</span><span>Falha/Ausente</span></div>
+            <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Lente Retrovisor Direito</span><label class="gra ok"><input type="radio" name="ac_retro_d" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_retro_d" value="AUSENTE" onchange="upd()"><span>Falha</span></label></div>
+            <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Lente Retrovisor Esquerdo</span><label class="gra ok"><input type="radio" name="ac_retro_e" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_retro_e" value="AUSENTE" onchange="upd()"><span>Falha</span></label></div>
+            <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Estepe</span><label class="gra ok"><input type="radio" name="ac_estepe" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_estepe" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
+            <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Chave de Roda</span><label class="gra ok"><input type="radio" name="ac_chave_roda" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_chave_roda" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
+            <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Triângulo</span><label class="gra ok"><input type="radio" name="ac_triangulo" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_triangulo" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
+            <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Macaco</span><label class="gra ok"><input type="radio" name="ac_macaco" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_macaco" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
+            <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Bancos (Danos)</span><label class="gra ok"><input type="radio" name="ac_bancos" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_bancos" value="AUSENTE" onchange="upd()"><span>Com Dano</span></label></div>
+            <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Tapetes</span><label class="gra ok"><input type="radio" name="ac_tapetes" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_tapetes" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
+            <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Documentos do Veículo</span><label class="gra ok"><input type="radio" name="ac_docs" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_docs" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
+            <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Rádio Base</span><label class="gra ok"><input type="radio" name="ac_radio" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_radio" value="AUSENTE" onchange="upd()"><span>Falha</span></label></div>
+            <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Extintor Cabine Geral</span><label class="gra ok"><input type="radio" name="ac_extintor_g" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_extintor_g" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
+            <div class="gr-r" style="grid-template-columns:1fr 90px 90px"><span class="rl">Extintor Cabine Motorista</span><label class="gra ok"><input type="radio" name="ac_extintor_m" value="PRESENTE" onchange="upd()"><span>OK</span></label><label class="gra nok"><input type="radio" name="ac_extintor_m" value="AUSENTE" onchange="upd()"><span>Ausente</span></label></div>
+          </div></div>
+        </div>
       </div>
 
       <div class="btn-row"><button class="btn red" onclick="submitChecklist()">✓ Finalizar Checklist</button></div>
     </div>
+
+
 
     <!-- SUGERIR -->
     <div class="panel" id="panel-sugerir">
@@ -547,6 +629,36 @@ tbody td{padding:8px 13px;color:#CDD5E0;vertical-align:middle}
       </div>
     </div>
 
+    <!-- PASSAGEM DE PLANTÃO -->
+    <div class="panel" id="panel-plantao">
+      <div class="card">
+        <div class="ch">
+          <div class="ch-icon" style="background:#0EA5E9">🔄</div>
+          <div class="ch-title">Passagem de Plantão</div>
+          <button class="ch-btn" onclick="openModalPlantao()">+ Registrar</button>
+        </div>
+
+        <!-- Filtros -->
+        <div style="display:flex;gap:8px;padding:12px 18px 0;flex-wrap:wrap">
+          <select class="fi" id="pp-filtro-amb" onchange="renderPlantao()" style="width:180px;padding:7px 10px">
+            <option value="">Todas as ambulâncias</option>
+          </select>
+          <input class="fi" type="month" id="pp-filtro-mes" onchange="renderPlantao()" style="width:150px;padding:7px 10px">
+          <input class="fi" type="text" id="pp-busca" placeholder="🔍 Buscar..." oninput="renderPlantao()" style="flex:1;min-width:130px;padding:7px 10px">
+        </div>
+
+        <!-- Resumo do turno atual -->
+        <div id="pp-resumo-atual" style="margin:14px 18px 0;display:none">
+          <div style="font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">ÚLTIMO REGISTRO</div>
+          <div id="pp-ultimo-card"></div>
+        </div>
+
+        <div class="cb" style="padding-top:10px">
+          <div id="pp-lista" style="display:flex;flex-direction:column;gap:10px"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- ALTERAÇÕES -->
     <div class="panel" id="panel-alteracoes">
       <div class="card">
@@ -586,9 +698,39 @@ tbody td{padding:8px 13px;color:#CDD5E0;vertical-align:middle}
     <!-- ESTOQUE -->
     <div class="panel" id="panel-estoque">
       <div id="low-alert" style="display:none" class="alert red">⚠️ <span id="low-txt"></span></div>
+
+      <!-- PAINEL DE VALIDADES — visível só para RT/Admin -->
       <div class="card">
-        <div class="ch"><div class="ch-icon" style="background:var(--purple)">💊</div><div class="ch-title">Estoque de Medicamentos e Materiais</div></div>
-        <div class="cb"><div class="stock-grid" id="stock-grid"></div></div>
+        <div class="ch">
+          <div class="ch-icon" style="background:var(--purple)">💊</div>
+          <div class="ch-title">Estoque & Validades</div>
+          <div id="val-resumo" style="margin-left:8px;display:flex;gap:5px;flex-wrap:wrap"></div>
+          <button class="ch-btn" id="btn-cfg-estoque" onclick="openModal('modal-cfg-estoque')" style="display:none;margin-left:auto">⚙️ Configurar</button>
+        </div>
+        <div class="cb" style="padding:0 0 8px">
+          <div style="display:flex;gap:8px;padding:10px 14px 8px;flex-wrap:wrap;align-items:center">
+            <input class="fi" type="text" id="stk-busca" placeholder="🔍 Buscar item..." oninput="renderStock()" style="flex:1;min-width:130px;padding:7px 10px">
+            <select class="fi" id="stk-cat-filtro" onchange="renderStock()" style="width:160px;padding:7px 10px">
+              <option value="">Todas categorias</option>
+            </select>
+            <select class="fi" id="stk-status-filtro" onchange="renderStock()" style="width:155px;padding:7px 10px">
+              <option value="">Todos os status</option>
+              <option value="repor">🔴 Repor</option>
+              <option value="baixo">⚠️ Baixo</option>
+              <option value="vencido">⏰ Vencido/Próximo</option>
+              <option value="ok">✅ OK</option>
+              <option value="sem_data">❓ Sem validade</option>
+            </select>
+          </div>
+          <!-- Header da lista -->
+          <div id="stk-col-header" style="display:grid;grid-template-columns:1fr 90px 150px 95px;padding:6px 4px;gap:8px;background:var(--dark3);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+            <span style="font-size:0.65rem;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Item</span>
+            <span style="font-size:0.65rem;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;text-align:center">Qtd</span>
+            <span style="font-size:0.65rem;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;text-align:center">Validade <span id="val-edit-hint" style="font-weight:400;color:var(--muted2);display:none">(editável)</span></span>
+            <span style="font-size:0.65rem;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;text-align:right">Status</span>
+          </div>
+          <div class="stock-grid" id="stock-grid"></div>
+        </div>
       </div>
       <div class="card">
         <div class="ch"><div class="ch-icon" style="background:var(--purple)">📝</div><div class="ch-title">Registrar Uso</div></div>
@@ -617,7 +759,7 @@ tbody td{padding:8px 13px;color:#CDD5E0;vertical-align:middle}
     <div class="panel" id="panel-usuarios">
       <div class="card">
         <div class="ch"><div class="ch-icon" style="background:var(--blue)">👥</div><div class="ch-title">Usuários da Empresa</div><button class="ch-btn" onclick="openModal('modal-user')">+ Adicionar</button></div>
-        <div class="tbl-wrap"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Função</th><th>Cadastrado em</th><th>Ações</th></tr></thead><tbody id="users-tbody"></tbody></table></div>
+        <div class="tbl-wrap"><table><thead><tr><th>Nome / WhatsApp</th><th>E-mail</th><th>Função</th><th>Cadastrado em</th><th>Ações</th></tr></thead><tbody id="users-tbody"></tbody></table></div>
       </div>
     </div>
 
@@ -639,7 +781,12 @@ tbody td{padding:8px 13px;color:#CDD5E0;vertical-align:middle}
             <div><div class="fl">Plano atual</div><input class="fi" type="text" id="cfg-plano" disabled></div>
           </div>
           <div><div class="fl">RT Principal da Empresa</div><select class="fi" id="cfg-rt"><option value="">Selecione o RT...</option></select></div>
-          <div><div class="fl">URL Google Apps Script (Drive)</div>
+          <div><div class="fl">Acesso ao checklist completo para todos os profissionais</div>
+            <div class="rg" style="margin-bottom:14px">
+              <label class="rb gr"><input type="radio" name="chk_acesso" value="true" id="chk-acesso-sim"><span>✔ Sim — todos veem o checklist completo</span></label>
+              <label class="rb"><input type="radio" name="chk_acesso" value="false" id="chk-acesso-nao" checked><span>✘ Não — cada um vê só a sua parte</span></label>
+            </div>
+            <div class="fl">URL Google Apps Script (Drive)</div>
             <div style="display:flex;gap:8px">
               <input class="fi" type="text" id="cfg-gas" placeholder="https://script.google.com/macros/s/.../exec" style="flex:1">
               <button class="btn ghost" onclick="salvarGAS()">Salvar URL</button>
@@ -667,22 +814,55 @@ tbody td{padding:8px 13px;color:#CDD5E0;vertical-align:middle}
 
 <!-- MODAL USUÁRIO -->
 <div class="modal-ov" id="modal-user">
-<div class="modal-box">
-  <h3>Adicionar Usuário</h3>
-  <div class="af"><label>Nome completo *</label><input type="text" id="nu-nome" placeholder="Nome"></div>
+<div class="modal-box" style="max-width:480px">
+  <h3>➕ Adicionar Profissional</h3>
+  <div class="af"><label>Nome completo *</label><input type="text" id="nu-nome" placeholder="Ex: Carlos Silva"></div>
   <div class="af"><label>E-mail *</label><input type="email" id="nu-email" placeholder="email@empresa.com.br"></div>
-  <div class="af"><label>Senha provisória *</label><input type="password" id="nu-senha" placeholder="Mínimo 6 caracteres"></div>
+  <div class="af"><label>WhatsApp (opcional)</label>
+    <input type="tel" id="nu-whatsapp" placeholder="Ex: 54999990000" style="margin-bottom:4px">
+    <span style="font-size:0.72rem;color:var(--muted)">DDD + número, sem espaços ou traços</span>
+  </div>
+  <div class="af"><label>Senha provisória *</label>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input type="text" id="nu-senha" class="fi" placeholder="Mínimo 6 caracteres" style="flex:1">
+      <button class="btn ghost sm" onclick="gerarSenhaAleatoria()" type="button">🎲 Gerar</button>
+    </div>
+  </div>
   <div class="af"><label>Função *</label>
     <select id="nu-func">
       <option value="Administrador">Administrador</option>
       <option value="RT">RT — Responsável Técnico</option>
+      <option value="Enfermeiro">Enfermeiro</option>
+      <option value="Técnico">Técnico de Enfermagem</option>
       <option value="Condutor" selected>Condutor</option>
-      <option value="Técnico">Técnico / Socorrista</option>
     </select>
   </div>
+  <!-- Preview do convite -->
+  <div id="preview-convite" style="display:none;background:var(--dark3);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:4px">
+    <div style="font-size:0.7rem;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">📱 Preview da mensagem de convite</div>
+    <div id="preview-texto" style="font-size:0.82rem;line-height:1.6;white-space:pre-wrap;color:var(--text)"></div>
+  </div>
+  <div class="modal-foot" style="flex-wrap:wrap;gap:8px">
+    <button class="btn green" onclick="addUser()" style="flex:1">✅ Cadastrar</button>
+    <button class="btn" style="background:#25D366;color:white;flex:1" onclick="addUserEEnviarWhatsApp()">📲 Cadastrar e enviar WhatsApp</button>
+    <button class="btn ghost" onclick="closeModal('modal-user')" style="width:100%">Cancelar</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL CONVITE RÁPIDO -->
+<div class="modal-ov" id="modal-convite">
+<div class="modal-box" style="max-width:460px">
+  <h3>📲 Enviar Acesso por WhatsApp</h3>
+  <div id="convite-info" style="background:var(--dark3);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px">
+    <div style="font-weight:600;margin-bottom:4px" id="conv-nome">—</div>
+    <div style="font-size:0.8rem;color:var(--muted)" id="conv-func">—</div>
+  </div>
+  <div style="font-size:0.75rem;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Mensagem que será enviada:</div>
+  <textarea id="conv-mensagem" class="fta" style="min-height:160px;font-size:0.82rem;line-height:1.6"></textarea>
   <div class="modal-foot">
-    <button class="btn green" onclick="addUser()">Adicionar</button>
-    <button class="btn ghost" onclick="closeModal('modal-user')">Cancelar</button>
+    <button class="btn" style="background:#25D366;color:white;flex:1" onclick="abrirWhatsApp()">📲 Abrir WhatsApp</button>
+    <button class="btn ghost" onclick="closeModal('modal-convite')">Fechar</button>
   </div>
 </div>
 </div>
@@ -738,25 +918,22 @@ tbody td{padding:8px 13px;color:#CDD5E0;vertical-align:middle}
 <div class="toast" id="toast"><span id="toast-msg">✅ Salvo!</span></div>
 
 <script>
-// ═══════ SEGURANÇA ═══════
+// ═══════ SEGURANCA ═══════
 function esc(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
-
-// Anti-spam: impede submissões repetidas
 const _submitLocks={};
 function lockSubmit(key,ms){if(_submitLocks[key])return false;_submitLocks[key]=true;setTimeout(()=>{_submitLocks[key]=false},ms||2500);return true}
-
-// Validação de URL (whitelist Google Apps Script)
 function isValidGASUrl(url){try{const u=new URL(url);return u.protocol==='https:'&&u.hostname==='script.google.com'}catch{return false}}
+async function hashSenha(s){const enc=new TextEncoder().encode(s);const buf=await crypto.subtle.digest('SHA-256',enc);return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('')}
 
 // ═══════ CONSTANTES ═══════
 const SUPER_EMAIL='admin@ambulcheck.com.br';
 const SUPER_HASH='e34f92a20532a873cb3184398070b4b82a8fa29cf48572c203dc5f0fa6158231';
-const SUPER_OBJ = {id:'superadmin',nome:'Super Admin',email:SUPER_EMAIL,role:'superadmin',empresa:'AmbuCheck'};
+const SUPER_OBJ={id:'superadmin',nome:'Super Admin',email:SUPER_EMAIL,role:'superadmin',empresa:'AmbuCheck'};
 const ROLE_PILL  = {superadmin:'rp-super',Administrador:'rp-admin',RT:'rp-rt',Condutor:'rp-func',Técnico:'rp-func'};
 const ROLE_LABEL = {superadmin:'Super Admin',Administrador:'Admin',RT:'Responsável Técnico',Condutor:'Condutor',Técnico:'Técnico'};
 const DEFAULT_STOCK = [
   // ── MEDICAMENTOS – Compartimento Interno Geral ──
-  {id:'acs',name:'Ácido Acetilsalicílico 100mg (Blister)',cat:'Medicamento',qty:2,min:1,unit:'bl'},
+  {id:'acs',name:'Ácido Acetilsalicílico 100mg (Blister)',cat:'Medicamento',qty:2,min:1,unit:'bl',validade:'',qtd_rt:null},
   {id:'ac_tranex',name:'Ácido Tranexâmico 250mg',cat:'Medicamento',qty:5,min:5,unit:'amp'},
   {id:'adenosina',name:'Adenosina 3mg/ml - 2ml',cat:'Medicamento',qty:1,min:1,unit:'amp'},
   {id:'agua_dest',name:'Água Destilada 10ml',cat:'Medicamento',qty:5,min:5,unit:'amp'},
@@ -1123,8 +1300,8 @@ const BAD  = new Set(['BAIXO','AUSENTE','NAO','NAO_LIMPA','RESERVA','1/4','1/3',
 //  DB — Firebase + localStorage fallback
 // ═══════════════════════════════════════════
 const DB = {
-  get(k){try{const raw=localStorage.getItem('ac_'+k);if(raw===null)return null;return JSON.parse(raw)}catch(e){console.warn('DB.get parse error for',k,e);return null}},
-  set(k,v){try{localStorage.setItem('ac_'+k,JSON.stringify(v))}catch(e){console.warn('DB.set storage error:',e.message);if(e.name==='QuotaExceededError')showToast('⚠️ Armazenamento local cheio.')}},
+  get(k){try{const raw=localStorage.getItem('ac_'+k);if(raw===null)return null;return JSON.parse(raw)}catch(e){console.warn('DB.get parse error:',k,e);return null}},
+  set(k,v){try{localStorage.setItem('ac_'+k,JSON.stringify(v))}catch(e){if(e.name==='QuotaExceededError')showToast('⚠️ Armazenamento local cheio.')}},
   getC(cid,k){if(!cid||!k)return null;return this.get('co_'+cid+'_'+k)},
   setC(cid,k,v){
     if(!cid||!k)return;
@@ -1160,7 +1337,11 @@ const getUsers=()=>DB.getC(cid(),'users')||[];
 const setUsers=v=>DB.setC(cid(),'users',v);
 const getAmbs=()=>DB.getC(cid(),'ambs')||[];
 const setAmbs=v=>DB.setC(cid(),'ambs',v);
-const getStock=()=>DB.getC(cid(),'stock')||DEFAULT_STOCK.map(i=>({...i}));
+const getStock=()=>{
+  const s=DB.getC(cid(),'stock')||DEFAULT_STOCK.map(i=>({...i}));
+  // Garantir campo lotes em cada item
+  return s.map(i=>({...i, lotes: i.lotes||[]}));
+};
 const setStock=v=>DB.setC(cid(),'stock',v);
 const getChks=()=>DB.getC(cid(),'checklists')||[];
 const setChks=v=>DB.setC(cid(),'checklists',v);
@@ -1188,8 +1369,6 @@ function authTab(tab,el){
   qid('af-'+tab).classList.add('active');
 }
 
-async function hashSenha(s){const enc=new TextEncoder().encode(s);const buf=await crypto.subtle.digest('SHA-256',enc);return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('')}
-
 function findUser(email,senha){
   for(const co of getAllCos()){
     const u=(DB.getC(co.id,'users')||[]).find(u=>u.email===email&&u.senha===senha);
@@ -1203,11 +1382,8 @@ async function doLogin(){
   const err=qid('login-err'); err.classList.remove('show');
   if(!email||!senha){err.textContent='Preencha e-mail e senha.';err.classList.add('show');return;}
   if(!lockSubmit('login',3000)){return;}
-  // Super admin — comparação por hash, sem senha em texto no código
-  if(email===SUPER_EMAIL){
-    const h=await hashSenha(senha);
-    if(h===SUPER_HASH){loginOk(SUPER_OBJ);return;}
-  }
+  // Super admin — hash
+  if(email===SUPER_EMAIL){const h=await hashSenha(senha);if(h===SUPER_HASH){loginOk(SUPER_OBJ);return;}}
   // Tentar Firebase Auth
   if(window._fbReady){
     try{
@@ -1289,7 +1465,6 @@ function doRegister(){
 
 function loginOk(user){
   CU=user;
-  // Nunca armazenar senha na sessão
   const safeSession={id:user.id,email:user.email,nome:user.nome,role:user.role,companyId:user.companyId,empresa:user.empresa,companyPlano:user.companyPlano};
   DB.set('session',safeSession);
   // Salvar user no Firestore
@@ -1318,7 +1493,7 @@ function setupApp(){
   qid('sb-nome').textContent=CU.nome;
   qid('sb-co').textContent=CU.empresa||'—';
   qid('topbar-co').textContent=CU.empresa||'AmbuCheck';
-  qid('sb-role').innerHTML=`<span class="rp ${ROLE_PILL[CU.role]||'rp-func'}">${ROLE_LABEL[CU.role]||CU.role}</span>`;
+  qid('sb-role').innerHTML=`<span class="rp ${ROLE_PILL[CU.role]||'rp-func'}">${esc(ROLE_LABEL[CU.role]||CU.role)}</span>`;
   buildNav();
   buildAmbRadios();
   renderEletrico();
@@ -1335,6 +1510,8 @@ function setupApp(){
   initConfig();
   window._kmSaidas=[]; renderKmSaidas();
   buildBottomNav();
+  setupChecklistByRole();
+  setTimeout(renderValidades, 200);
   if(CU.role==='superadmin') renderSuperAdmin();
 }
 
@@ -1354,6 +1531,9 @@ function buildNav(){
   addSep('Principal');
   addNav('📊','Dashboard','dashboard').classList.add('active');
   addNav('📋','Checklist','checklist');
+  if(role==='Enfermeiro'||role==='RT'||role==='Administrador'){
+    addNav('🔄','Passagem de Plantão','plantao');
+  }
   if(role==='RT'||role==='Administrador'){addSep('Aprovações');addNav('⏳','Aprovar Sugestões','aprovacoes',pendingSugs,'ye')}
   if(role==='Condutor'||role==='Técnico'){addSep('Sugestões');addNav('💡','Sugerir Item','sugerir')}
   addSep('Registros');
@@ -1372,7 +1552,8 @@ function showPanel(id){
   const p=qid('panel-'+id); if(p) p.classList.add('active');
   const T={dashboard:'Dashboard',checklist:'Checklist Mecânico',aprovacoes:'Aprovações RT',sugerir:'Sugerir Item',alteracoes:'Alterações',estoque:'Estoque & Medicações',usuarios:'Usuários',ambulancias:'Ambulâncias',config:'Configurações',superadmin:'Super Admin'};
   qid('topbar-title').textContent=T[id]||id;
-  if(id==='estoque'){renderStock();renderUso()}
+  if(id==='estoque'){renderStock();renderUso();renderValidades();}
+  if(id==='plantao'){renderPlantao();}
   if(id==='aprovacoes'){renderAprovacoes();refreshBadge()}
   if(id==='dashboard') renderDashboard();
   if(id==='superadmin') renderSuperAdmin();
@@ -1409,7 +1590,7 @@ function onAmbSelect(ambId){
     const u=users.find(x=>x.id===e.userId);
     return`<span style="display:inline-flex;align-items:center;gap:4px;margin:2px 4px 2px 0;padding:2px 8px;background:var(--dark4);border:1px solid var(--border);border-radius:4px;font-size:0.75rem">${u?'👤 '+esc(u.nome):esc(e.cargo)}</span>`;
   }).join('');
-  if(info){info.innerHTML=`<b style="color:var(--text)">${ti.icon} ${amb.prefixo} — Equipe Fixa:</b><br>${eqStr}`;info.style.display='block';}
+  if(info){info.innerHTML=`<b style="color:var(--text)">${ti.icon} ${esc(amb.prefixo)} — Equipe Fixa:</b><br>${eqStr}`;info.style.display='block';}
 }
 
 function renderAmbs(){
@@ -1426,7 +1607,7 @@ function renderAmbs(){
     return `<tr>
       <td><b>${esc(a.prefixo)}</b><br><span style="font-size:0.72rem;color:var(--muted)">${esc(a.placa)}</span></td>
       <td>${tipoPill(a.tipo)}</td>
-      <td style="font-size:0.78rem">${esc(a.modelo)||'—'}${a.ano?` (${esc(a.ano)})`:''}</td>
+      <td style="font-size:0.78rem">${esc(a.modelo||'—')}${a.ano?` (${esc(a.ano)})`:''}</td>
       <td style="font-size:0.76rem;line-height:1.6">${eqStr}</td>
       <td>${rt?`<span class="badge b-ye">${esc(rt.nome.split(' ')[0])}</span>`:'<span class="badge b-gray">Empresa</span>'}</td>
       <td><span class="badge ${a.status==='Ativo'?'b-ok':'b-nok'}">${esc(a.status)}</span></td>
@@ -1458,12 +1639,12 @@ function addEqRow(listId,cargo,userId){
   const div=document.createElement('div');
   div.id=id; div.className='eq-row';
   div.innerHTML=`
-    <input class="fi" type="text" placeholder="Cargo / Função" value="${cargo||''}" style="font-size:0.82rem;padding:7px 10px">
+    <input class="fi" type="text" placeholder="Cargo / Função" value="${esc(cargo||'')}" style="font-size:0.82rem;padding:7px 10px">
     <select class="fi" style="font-size:0.82rem;padding:7px 10px">
       <option value="">Funcionário (opcional)</option>
-      ${users.map(u=>`<option value="${u.id}"${u.id===(userId||'')?' selected':''}>${u.nome} (${u.role})</option>`).join('')}
+      ${users.map(u=>`<option value="${esc(u.id)}"${u.id===(userId||'')?' selected':''}>${esc(u.nome)} (${esc(u.role)})</option>`).join('')}
     </select>
-    <button class="btn danger sm" onclick="qid('${id}').remove()" style="padding:5px 9px;width:32px;justify-content:center">✕</button>`;
+    <button class="btn danger sm" onclick="qid('${esc(id)}').remove()" style="padding:5px 9px;width:32px;justify-content:center">✕</button>`;
   qid(listId).appendChild(div);
 }
 
@@ -1484,7 +1665,7 @@ function openModalAmb(){
   qid('ma-equipe-list').innerHTML=''; eqCounter=0;
   const sel=qid('ma-rt');
   sel.innerHTML='<option value="">Sem RT específico (usa RT da empresa)</option>';
-  getRTs().forEach(u=>sel.innerHTML+=`<option value="${u.id}">${u.nome} (${u.role})</option>`);
+  getRTs().forEach(u=>sel.innerHTML+=`<option value="${esc(u.id)}">${esc(u.nome)} (${esc(u.role)})</option>`);
   qid('modal-amb-foot').innerHTML=`<button class="btn red" onclick="saveAmb()">Cadastrar</button><button class="btn ghost" onclick="closeModal('modal-amb')">Cancelar</button>`;
   openModal('modal-amb');
 }
@@ -1500,7 +1681,7 @@ function openEditEquipe(ambId){
   (amb.equipe||[]).forEach(e=>addEqRow('ma-equipe-list',e.cargo,e.userId));
   const sel=qid('ma-rt');
   sel.innerHTML='<option value="">Sem RT específico</option>';
-  getRTs().forEach(u=>sel.innerHTML+=`<option value="${u.id}"${u.id===amb.rt?' selected':''}>${u.nome} (${u.role})</option>`);
+  getRTs().forEach(u=>sel.innerHTML+=`<option value="${esc(u.id)}"${u.id===amb.rt?' selected':''}>${esc(u.nome)} (${esc(u.role)})</option>`);
   qid('modal-amb-foot').innerHTML=`<button class="btn red" onclick="saveAmb()">💾 Salvar</button><button class="btn ghost" onclick="closeModal('modal-amb')">Cancelar</button>`;
   openModal('modal-amb');
 }
@@ -1531,7 +1712,7 @@ function openSetRT(ambId){
   qid('set-rt-info').textContent=`Ambulância: ${amb.prefixo} (${amb.placa})`;
   const sel=qid('set-rt-sel');
   sel.innerHTML='<option value="">Sem RT específico</option>';
-  getRTs().forEach(u=>sel.innerHTML+=`<option value="${u.id}"${u.id===amb.rt?' selected':''}>${u.nome} (${u.role})</option>`);
+  getRTs().forEach(u=>sel.innerHTML+=`<option value="${esc(u.id)}"${u.id===amb.rt?' selected':''}>${esc(u.nome)} (${esc(u.role)})</option>`);
   openModal('modal-set-rt');
 }
 
@@ -1561,9 +1742,9 @@ function renderExtraItems(){
       <span class="badge b-ok">${esc(e.categoria)}</span>
       <span style="font-size:0.85rem;font-weight:600">${esc(e.nome)}</span>
       <div class="rg" style="margin-left:auto">
-        <label class="rb"><input type="radio" name="ex_${e.id}" value="OK" onchange="upd()"><span>✔ OK</span></label>
-        <label class="rb"><input type="radio" name="ex_${e.id}" value="NOK" onchange="upd()"><span>✘ N/OK</span></label>
-        <label class="rb"><input type="radio" name="ex_${e.id}" value="NA" onchange="upd()"><span>N/A</span></label>
+        <label class="rb"><input type="radio" name="ex_${esc(e.id)}" value="OK" onchange="upd()"><span>✔ OK</span></label>
+        <label class="rb"><input type="radio" name="ex_${esc(e.id)}" value="NOK" onchange="upd()"><span>✘ N/OK</span></label>
+        <label class="rb"><input type="radio" name="ex_${esc(e.id)}" value="NA" onchange="upd()"><span>N/A</span></label>
       </div>
     </div>`).join('');
 }
@@ -1589,13 +1770,7 @@ function submitChecklist(){
   if(!qid('condutor').value.trim()) missing.push('Condutor');
   if(!qs('input[name="ambulancia"]:checked')) missing.push('Ambulância');
   if(!qs('input[name="turno"]:checked')) missing.push('Turno');
-  if(!qs('input[name="combustivel"]:checked')) missing.push('Combustível');
   if(missing.length){showToast('❌ Obrigatórios: '+missing.join(', '));return}
-  // Validação de dados numéricos
-  const km=parseInt(qid('hodometro').value);
-  if(isNaN(km)||km<0||km>9999999){showToast('❌ KM inválido (0 a 9.999.999).');return}
-  const kmFim=qid('km_fim').value?parseInt(qid('km_fim').value):null;
-  if(kmFim!==null&&(isNaN(kmFim)||kmFim<km)){showToast('❌ KM Fim deve ser maior que KM Início.');return}
   const ambId=gR('ambulancia');
   const amb=getAmb(ambId)||{prefixo:ambId,placa:'—'};
   const rec={
@@ -1628,8 +1803,7 @@ function submitSugestao(){
   if(!lockSubmit('sugestao',3000)){showToast('⏳ Aguarde...');return}
   const nome=qid('sug-nome').value.trim(), cat=qid('sug-cat').value, just=qid('sug-just').value.trim(), tipo=gR('sug_tipo');
   if(!nome||!cat||!just){showToast('❌ Preencha nome, categoria e justificativa.');return}
-  if(nome.length>100){showToast('❌ Nome muito longo (máx 100 caracteres).');return}
-  if(just.length>500){showToast('❌ Justificativa muito longa (máx 500 caracteres).');return}
+  if(nome.length>100||just.length>500){showToast('❌ Texto muito longo.');return}
   const sug={id:'SUG-'+uid(),nome,categoria:cat,tipo:tipo||'estoque',justificativa:just,solicitante:CU.nome,solicitanteId:CU.id,status:'pendente',dtSolicitacao:nowStr(),obsRT:''};
   const sugs=getSugs(); sugs.unshift(sug); setSugs(sugs);
   qid('sug-nome').value=''; qid('sug-cat').value=''; qid('sug-just').value='';
@@ -1645,8 +1819,8 @@ function renderSugs(){
   tbody.innerHTML=sugs.map(s=>`<tr>
     <td><b>${esc(s.nome)}</b></td><td>${esc(s.categoria)}</td><td><span class="badge b-info">${esc(s.tipo)}</span></td>
     <td style="font-size:0.75rem">${esc(s.dtSolicitacao)}</td>
-    <td><span class="badge ${sc[s.status]||'b-gray'}">${esc(s.status)}</span></td>
-    <td style="font-size:0.78rem;color:var(--muted)">${esc(s.obsRT)||'—'}</td>
+    <td><span class="badge ${sc[s.status]}">${esc(s.status)}</span></td>
+    <td style="font-size:0.78rem;color:var(--muted)">${esc(s.obsRT||'—')}</td>
   </tr>`).join('');
 }
 
@@ -1674,9 +1848,9 @@ function renderAprovacoes(){
   const sc={aprovado:'b-ok',rejeitado:'b-nok'};
   hel.innerHTML=hist.map(s=>`<tr>
     <td><b>${esc(s.nome)}</b></td><td>${esc(s.solicitante)}</td>
-    <td><span class="badge ${sc[s.status]||'b-gray'}">${esc(s.status)}</span></td>
-    <td style="font-size:0.75rem">${esc(s.dtDecisao)||'—'}</td>
-    <td style="font-size:0.78rem">${esc(s.obsRT)||'—'}</td>
+    <td><span class="badge ${sc[s.status]}">${esc(s.status)}</span></td>
+    <td style="font-size:0.75rem">${esc(s.dtDecisao||'—')}</td>
+    <td style="font-size:0.78rem">${esc(s.obsRT||'—')}</td>
   </tr>`).join('');
 }
 
@@ -1724,7 +1898,7 @@ function submitAlt(){
   const amb=qs('input[name="alt_amb"]:checked'), tipo=qs('input[name="alt_tipo"]:checked');
   const desc=qid('alt-desc').value.trim(), resp=qid('alt-resp').value.trim();
   if(!amb||!tipo||!desc||!resp){showToast('❌ Preencha: Ambulância, Tipo, Descrição e Responsável.');return}
-  if(desc.length>1000){showToast('❌ Descrição muito longa (máx 1000 caracteres).');return}
+  if(desc.length>1000){showToast('❌ Descrição muito longa.');return}
   const ambObj=getAmb(amb.value)||{prefixo:amb.value,placa:'—'};
   const rec={id:'ALT-'+uid(),dt:nowStr(),data:qid('alt-data').value,amb:`${ambObj.prefixo} (${ambObj.placa})`,tipo:tipo.value,grav:gR('alt_grav'),desc,resp,status:gR('alt_status')||'Pendente',custo:qid('alt-custo').value||'0',usuario:CU.nome};
   const alts=getAlts(); alts.unshift(rec); setAlts(alts);
@@ -1740,8 +1914,8 @@ function renderAlts(){
   const gc={Leve:'b-ok',Moderada:'b-ye',Grave:'b-nok'};
   const sc={'Pendente':'b-nok','Em Andamento':'b-ye','Resolvido':'b-ok'};
   tbody.innerHTML=alts.map(r=>`<tr>
-    <td>${esc(r.data)||'—'}</td><td><span class="badge b-info">${esc(r.amb)}</span></td><td>${esc(r.tipo)}</td>
-    <td><span class="badge ${gc[r.grav]||'b-gray'}">${esc(r.grav)||'—'}</span></td>
+    <td>${esc(r.data||'—')}</td><td><span class="badge b-info">${esc(r.amb)}</span></td><td>${esc(r.tipo)}</td>
+    <td><span class="badge ${gc[r.grav]||'b-gray'}">${esc(r.grav||'—')}</span></td>
     <td style="max-width:180px">${esc(r.desc)}</td><td>${esc(r.resp)}</td>
     <td><span class="badge ${sc[r.status]||'b-gray'}">${esc(r.status)}</span></td>
     <td>${r.custo&&r.custo!='0'?'R$ '+parseFloat(r.custo).toFixed(2):'—'}</td>
@@ -1750,43 +1924,439 @@ function renderAlts(){
 
 // ═══════ ESTOQUE ═══════
 function renderStock(){
-  const grid=qid('stock-grid'); if(!grid) return;
-  const stock=getStock();
-  const low=stock.filter(i=>i.qty<=i.min);
+  const grid = qid('stock-grid'); if(!grid) return;
+  const stock = getStock();
+  const isRT = CU && (CU.role==='RT'||CU.role==='Administrador'||CU.role==='superadmin');
+  const hoje = new Date().toISOString().slice(0,10);
+
+  // Botão configurar + hint de edição
+  const btnCfg = qid('btn-cfg-estoque');
+  if(btnCfg) btnCfg.style.display = isRT ? '' : 'none';
+  const hint = qid('val-edit-hint');
+  if(hint) hint.style.display = isRT ? '' : 'none';
+
+  // Filtros
+  const busca = (qid('stk-busca')?.value||'').toLowerCase();
+  const catFiltro = qid('stk-cat-filtro')?.value||'';
+  const statusFiltro = qid('stk-status-filtro')?.value||'';
+
+  // Popular categorias no select (uma vez)
+  const catSel = qid('stk-cat-filtro');
+  if(catSel && catSel.options.length <= 1){
+    [...new Set(stock.map(i=>i.cat))].forEach(c=>{
+      const o=document.createElement('option'); o.value=c; o.textContent=c; catSel.appendChild(o);
+    });
+  }
+
+  // ── Helpers de lote ──
+  function getQtyTotal(item){
+    if(!item.lotes?.length) return item.qty||0;
+    return item.lotes.reduce((s,l)=>s+(l.qty||0), 0);
+  }
+  function getValidadeMaisProxima(item){
+    const datas=[...(item.lotes||[]).map(l=>l.validade).filter(Boolean)];
+    if(item.validade) datas.push(item.validade);
+    return datas.sort()[0]||'';
+  }
+  function calcDias(val){ return val ? Math.ceil((new Date(val)-new Date(hoje))/(1000*60*60*24)) : null; }
+  function getStatusItem(item){
+    const qty=getQtyTotal(item), val=getValidadeMaisProxima(item), dias=calcDias(val);
+    if(qty===0 && item.qtd_rt>0) return 'repor';
+    if(val && dias<0) return 'vencido';
+    if(val && dias<=30) return 'proximo';
+    if(qty>0 && qty<=item.min) return 'baixo';
+    if(!val && isRT) return 'sem_data';
+    return 'ok';
+  }
+
+  // ── Filtrar ──
+  let stockVisivel = stock.filter(i => isRT || i.qtd_rt===undefined || i.qtd_rt===null || i.qtd_rt>0);
+  if(busca) stockVisivel = stockVisivel.filter(i=>i.name.toLowerCase().includes(busca)||i.cat.toLowerCase().includes(busca));
+  if(catFiltro) stockVisivel = stockVisivel.filter(i=>i.cat===catFiltro);
+  if(statusFiltro==='repor')    stockVisivel = stockVisivel.filter(i=>getStatusItem(i)==='repor');
+  if(statusFiltro==='baixo')    stockVisivel = stockVisivel.filter(i=>getStatusItem(i)==='baixo');
+  if(statusFiltro==='vencido')  stockVisivel = stockVisivel.filter(i=>['vencido','proximo'].includes(getStatusItem(i)));
+  if(statusFiltro==='ok')       stockVisivel = stockVisivel.filter(i=>getStatusItem(i)==='ok');
+  if(statusFiltro==='sem_data') stockVisivel = stockVisivel.filter(i=>!getValidadeMaisProxima(i));
+
+  // ── Resumo badges no header ──
+  const semEst   = stock.filter(i=>getQtyTotal(i)===0&&i.qtd_rt>0).length;
+  const baixos   = stock.filter(i=>{const q=getQtyTotal(i);return q>0&&q<=i.min;}).length;
+  const vencidos = stock.filter(i=>{const v=getValidadeMaisProxima(i);return v&&v<hoje;}).length;
+  const proximos = stock.filter(i=>{const v=getValidadeMaisProxima(i),d=calcDias(v);return v&&d>=0&&d<=30;}).length;
+  const semData  = stock.filter(i=>!getValidadeMaisProxima(i)).length;
+  const resumo   = qid('val-resumo');
+  if(resumo) resumo.innerHTML = [
+    semEst   ? `<span class="badge b-nok" style="font-size:0.62rem;cursor:pointer" onclick="qid('stk-status-filtro').value='repor';renderStock()">🔴 ${semEst} REPOR</span>` : '',
+    vencidos ? `<span class="badge b-nok" style="font-size:0.62rem;cursor:pointer" onclick="qid('stk-status-filtro').value='vencido';renderStock()">⚠️ ${vencidos} VENCIDO${vencidos>1?'S':''}</span>` : '',
+    proximos ? `<span class="badge b-ye"  style="font-size:0.62rem;cursor:pointer" onclick="qid('stk-status-filtro').value='vencido';renderStock()">⏰ ${proximos} em breve</span>` : '',
+    baixos   ? `<span class="badge b-ye"  style="font-size:0.62rem;cursor:pointer" onclick="qid('stk-status-filtro').value='baixo';renderStock()">📉 ${baixos} BAIXO${baixos>1?'S':''}</span>` : '',
+    isRT&&semData ? `<span class="badge b-gray" style="font-size:0.62rem;cursor:pointer" onclick="qid('stk-status-filtro').value='sem_data';renderStock()">❓ ${semData} sem data</span>` : ''
+  ].filter(Boolean).join('');
+
+  // Alerta topo
   const la=qid('low-alert'), lt=qid('low-txt');
-  if(low.length){la.style.display='flex';lt.textContent=`${low.length} item(ns) com estoque baixo: ${low.map(i=>i.name).join(', ')}`}
-  else la.style.display='none';
-  qid('items-dl').innerHTML=stock.map(i=>`<option value="${i.name}">`).join('');
-  const cats=[...new Set(stock.map(i=>i.cat))];
-  grid.innerHTML='';
+  if(semEst||baixos||vencidos){
+    la.style.display='flex'; let msg='';
+    if(semEst)   msg+=`🔴 ${semEst} para REPOR. `;
+    if(baixos)   msg+=`⚠️ ${baixos} com estoque BAIXO. `;
+    if(vencidos) msg+=`⏰ ${vencidos} VENCIDO(S).`;
+    lt.textContent=msg;
+  } else la.style.display='none';
+
+  qid('items-dl').innerHTML = stockVisivel.map(i=>`<option value="${esc(i.name)}">`).join('');
+
+  // ── Renderizar por categoria ──
+  const cats = [...new Set(stockVisivel.map(i=>i.cat))];
+  grid.innerHTML = '';
+  if(!stockVisivel.length){
+    grid.innerHTML='<div class="empty" style="padding:24px;text-align:center">Nenhum item encontrado para os filtros selecionados.</div>';
+    return;
+  }
+
   cats.forEach(cat=>{
-    const h=document.createElement('div'); h.style.cssText='grid-column:1/-1';
-    h.innerHTML=`<div class="sec-t">${cat}</div>`; grid.appendChild(h);
-    stock.filter(i=>i.cat===cat).forEach(item=>{
-      const isLow=item.qty<=item.min;
-      const d=document.createElement('div'); d.className='stk '+(isLow?'low':'');
-      d.innerHTML=`${isLow?'<span class="low-b">BAIXO</span>':''}
-        <div class="stk-name">${item.name}</div><div class="stk-cat">${item.cat}</div>
-        <div class="stk-qty">
-          <button class="qty-btn" onclick="chgQty('${item.id}',-1)">−</button>
-          <span class="qty-val" id="qty-${item.id}">${item.qty}</span>
-          <span class="qty-unit">${item.unit}</span>
-          <button class="qty-btn" onclick="chgQty('${item.id}',1)">+</button>
-        </div><div class="stk-min">Mín: ${item.min} ${item.unit}</div>`;
-      grid.appendChild(d);
+    const itens = stockVisivel.filter(i=>i.cat===cat);
+    if(!itens.length) return;
+
+    // Título categoria
+    const sec = document.createElement('div');
+    sec.className = 'stk-list-sec';
+    const catVencidos = itens.filter(i=>getStatusItem(i)==='vencido').length;
+    const catRepor    = itens.filter(i=>getStatusItem(i)==='repor').length;
+    sec.innerHTML = `${esc(cat)} <span style="font-weight:400;opacity:0.6">(${itens.length})</span>`
+      + (catVencidos ? ` <span style="color:#FF7070;font-size:0.6rem">⚠️ ${catVencidos} vencido${catVencidos>1?'s':''}</span>` : '')
+      + (catRepor    ? ` <span style="color:#FF7070;font-size:0.6rem">🔴 ${catRepor} a repor</span>` : '');
+    grid.appendChild(sec);
+
+    itens.forEach(item=>{
+      const status    = getStatusItem(item);
+      const qtyTotal  = getQtyTotal(item);
+      const valProx   = getValidadeMaisProxima(item);
+      const dias      = calcDias(valProx);
+      const usaLotes  = item.lotes?.length > 0;
+
+      // Badge status
+      const badgeMap={
+        repor:    '<span class="badge b-nok" style="font-size:0.6rem">🔴 REPOR</span>',
+        vencido:  '<span class="badge b-nok" style="font-size:0.6rem">⚠️ VENCIDO</span>',
+        proximo:  `<span class="badge b-ye"  style="font-size:0.6rem">⏰ ${dias}d</span>`,
+        baixo:    '<span class="badge b-ye"  style="font-size:0.6rem">⚠️ BAIXO</span>',
+        sem_data: '<span class="badge b-gray" style="font-size:0.6rem">❓ sem data</span>',
+        ok:       '<span class="badge b-ok"  style="font-size:0.6rem">✅ OK</span>'
+      };
+      const statusBadge = badgeMap[status]||'';
+      const nameColor   = (status==='repor'||status==='vencido') ? 'color:#FCA5A5' : '';
+      const rowBg       = status==='repor'?' repor':status==='vencido'?' vencido':status==='baixo'?' baixo':'';
+      const padrao      = isRT && item.qtd_rt!=null ? ` <span style="font-size:0.62rem;color:var(--muted2)">(RT:${item.qtd_rt})</span>` : '';
+
+      // ── Cor da validade ──
+      const valColor = !valProx ? 'color:var(--muted2)'
+        : dias<0 ? 'color:#FF7070;font-weight:700'
+        : dias<=7 ? 'color:#FF7070;font-weight:600'
+        : dias<=30 ? 'color:var(--yellow);font-weight:600'
+        : 'color:var(--muted)';
+
+      // ── Campo de validade: RT pode editar, profissional só vê ──
+      const valCampo = isRT
+        ? `<div style="display:flex;align-items:center;gap:4px">
+            <input type="date" class="fi" id="val_rt_${esc(item.id)}" value="${valProx}"
+              onchange="salvarValidadeRTInline('${esc(item.id)}',this.value)"
+              style="padding:3px 5px;font-size:0.72rem;width:120px;${dias!==null&&dias<=30?'border-color:var(--yellow)':''}${dias!==null&&dias<0?'border-color:var(--red)':''}">
+          </div>`
+        : `<span style="font-size:0.74rem;${valColor}">${valProx||'—'}</span>`;
+
+      const headerEl = document.createElement('div');
+      headerEl.className = `stk-item-header${rowBg}`;
+      headerEl.style.cssText = 'display:grid;grid-template-columns:1fr 90px 150px 95px;align-items:center;padding:7px 4px;gap:8px;border-bottom:1px solid #131825';
+
+      if(usaLotes){
+        headerEl.innerHTML = `
+          <div>
+            <div style="font-size:0.82rem;font-weight:600;${nameColor}">${esc(item.name)}${padrao}</div>
+            <div style="font-size:0.62rem;color:var(--muted2)">Mín: ${item.min} ${esc(item.unit)} · ${item.lotes.length} lote(s)</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;justify-content:center">
+            <span style="font-weight:700;font-size:0.9rem;${status==='repor'?'color:#FF7070':''}">${qtyTotal}</span>
+            <span style="font-size:0.68rem;color:var(--muted2)">${esc(item.unit)}</span>
+            <button onclick="adicionarLote('${esc(item.id)}')" title="Adicionar lote" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--blue);cursor:pointer;font-size:0.7rem;padding:1px 4px">+lote</button>
+          </div>
+          ${valCampo}
+          <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px">
+            ${statusBadge}
+            <button onclick="toggleLotes('${esc(item.id)}')" id="btn-lote-${esc(item.id)}"
+              style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;font-size:0.65rem;padding:1px 4px">▼</button>
+          </div>`;
+      } else {
+        headerEl.innerHTML = `
+          <div>
+            <div style="font-size:0.82rem;font-weight:600;${nameColor}">${esc(item.name)}${padrao}</div>
+            <div style="font-size:0.62rem;color:var(--muted2)">Mín: ${item.min} ${esc(item.unit)}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;justify-content:center">
+            <button class="qty-btn" onclick="chgQty('${esc(item.id)}',-1)" style="width:22px;height:22px;font-size:0.85rem">−</button>
+            <span id="qty-${esc(item.id)}" style="min-width:22px;text-align:center;font-size:0.9rem;${status==='repor'?'color:#FF7070;font-weight:800':''}">${qtyTotal}</span>
+            <span style="font-size:0.68rem;color:var(--muted2)">${esc(item.unit)}</span>
+            <button class="qty-btn" onclick="chgQty('${esc(item.id)}',1)" style="width:22px;height:22px;font-size:0.85rem">+</button>
+            <button onclick="adicionarLote('${esc(item.id)}')" title="Adicionar 2º lote" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--blue);cursor:pointer;font-size:0.65rem;padding:1px 4px">+lote</button>
+          </div>
+          ${valCampo}
+          <div style="text-align:right">${statusBadge}</div>`;
+      }
+      grid.appendChild(headerEl);
+
+      // ── Lotes (expandidos por padrão) ──
+      if(usaLotes){
+        const cont = document.createElement('div');
+        cont.id = `lotes-${esc(item.id)}`;
+        const lotesOrd = [...item.lotes].sort((a,b)=>(!a.validade?1:!b.validade?-1:a.validade.localeCompare(b.validade)));
+        const loteRows = lotesOrd.map((lote,idx)=>{
+          const origIdx = item.lotes.indexOf(lote);
+          const dl = calcDias(lote.validade);
+          const lBadge = !lote.validade ? '<span class="badge b-gray" style="font-size:0.58rem">❓</span>'
+            : dl<0  ? '<span class="badge b-nok" style="font-size:0.58rem">⚠️ VENCIDO</span>'
+            : dl<=7 ? `<span class="badge b-nok" style="font-size:0.58rem">🔴 ${dl}d</span>`
+            : dl<=30 ? `<span class="badge b-ye" style="font-size:0.58rem">⏰ ${dl}d</span>`
+            : '<span class="badge b-ok" style="font-size:0.58rem">✅</span>';
+          const lValColor = !lote.validade?'color:var(--muted2)':dl<0?'color:#FF7070':dl<=30?'color:var(--yellow)':'color:var(--muted)';
+          const lValCampo = isRT
+            ? `<input type="date" class="fi" id="val_lote_${esc(item.id)}_${origIdx}" value="${lote.validade||''}"
+                onchange="salvarValidadeLote('${esc(item.id)}',${origIdx},this.value)"
+                style="padding:2px 5px;font-size:0.7rem;width:118px">`
+            : `<span style="font-size:0.7rem;${lValColor}">${lote.validade||'—'}</span>`;
+          return `<div class="stk-lote${dl!==null&&dl<0?' stk-lote-vencido':dl!==null&&dl<=30?' stk-lote-proximo':''}"
+            style="display:grid;grid-template-columns:80px 90px 150px 95px;align-items:center;padding:4px 4px 4px 20px;gap:8px;border-bottom:1px solid #0d1018">
+            <span style="font-size:0.7rem;color:var(--muted2);font-style:italic">Lote ${idx+1}</span>
+            <div style="display:flex;align-items:center;gap:3px;justify-content:center">
+              <button class="qty-btn" onclick="chgLote('${esc(item.id)}',${origIdx},-1)" style="width:18px;height:18px;font-size:0.78rem">−</button>
+              <span style="min-width:18px;text-align:center;font-size:0.82rem">${lote.qty||0}</span>
+              <span style="font-size:0.64rem;color:var(--muted2)">${esc(item.unit)}</span>
+              <button class="qty-btn" onclick="chgLote('${esc(item.id)}',${origIdx},1)" style="width:18px;height:18px;font-size:0.78rem">+</button>
+            </div>
+            ${lValCampo}
+            <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px">
+              ${lBadge}
+              <button onclick="removeLote('${esc(item.id)}',${origIdx})"
+                style="background:none;border:none;color:var(--muted2);cursor:pointer;font-size:0.72rem;padding:0 2px" title="Remover lote">✕</button>
+            </div>
+          </div>`;
+        }).join('');
+        cont.innerHTML = loteRows + `<div class="stk-add-lote"><span onclick="adicionarLote('${esc(item.id)}')">+ Adicionar lote</span></div>`;
+        grid.appendChild(cont);
+      }
     });
   });
 }
 
-function chgQty(id,d){const s=getStock(),i=s.find(x=>x.id===id);if(!i)return;i.qty=Math.max(0,i.qty+d);setStock(s);renderStock()}
+function chgQty(id,d){
+  const s=getStock(),i=s.find(x=>x.id===id);
+  if(!i) return;
+  i.qty=Math.max(0,i.qty+d);
+  setStock(s); renderStock();
+}
+
+// ─── GERENCIAMENTO DE LOTES ───
+function adicionarLote(itemId){
+  const stock=getStock();
+  const item=stock.find(i=>i.id===itemId);
+  if(!item) return;
+  if(!item.lotes) item.lotes=[];
+  if(item.lotes.length>=5){showToast('Máximo de 5 lotes por item.');return;}
+  // Se tem qty sem lote, migrar para primeiro lote
+  if(!item.lotes.length && item.qty>0){
+    item.lotes.push({qty:item.qty, validade:item.validade||''});
+    item.qty=0; item.validade='';
+  }
+  // Abrir modal de novo lote
+  window._loteItemId=itemId;
+  const loteNum=item.lotes.length+1;
+  qid('novo-lote-titulo').textContent=`Lote ${loteNum} — ${item.name}`;
+  qid('novo-lote-qty').value='';
+  qid('novo-lote-val').value='';
+  openModal('modal-novo-lote');
+}
+
+function salvarNovoLote(){
+  const qty=parseInt(qid('novo-lote-qty').value)||0;
+  const val=qid('novo-lote-val').value;
+  if(qty<=0){showToast('❌ Informe uma quantidade.');return;}
+  const stock=getStock();
+  const item=stock.find(i=>i.id===window._loteItemId);
+  if(!item){showToast('❌ Item não encontrado.');return;}
+  if(!item.lotes) item.lotes=[];
+  item.lotes.push({qty, validade:val});
+  setStock(stock);
+  closeModal('modal-novo-lote');
+  renderStock(); renderValidades();
+  showToast('✅ Lote adicionado!');
+}
+
+function chgLote(itemId, loteIdx, delta){
+  const stock=getStock();
+  const item=stock.find(i=>i.id===itemId);
+  if(!item||!item.lotes?.[loteIdx]) return;
+  item.lotes[loteIdx].qty=Math.max(0, (item.lotes[loteIdx].qty||0)+delta);
+  // Remover lote zerado automaticamente se tiver outros lotes
+  if(item.lotes[loteIdx].qty===0 && item.lotes.length>1){
+    if(confirm('Lote zerado. Remover este lote?')){
+      item.lotes.splice(loteIdx,1);
+    }
+  }
+  setStock(stock); renderStock();
+}
+
+function removeLote(itemId, loteIdx){
+  if(!confirm('Remover este lote?')) return;
+  const stock=getStock();
+  const item=stock.find(i=>i.id===itemId);
+  if(!item||!item.lotes) return;
+  item.lotes.splice(loteIdx,1);
+  // Se ficou sem lotes, voltar ao modo simples
+  if(!item.lotes.length){
+    item.qty=0; item.validade='';
+  }
+  setStock(stock); renderStock(); renderValidades();
+  showToast('✅ Lote removido.');
+}
+
+function toggleLotes(itemId){
+  const el=qid('lotes-'+itemId);
+  const btn=qid('btn-lote-'+itemId);
+  if(!el) return;
+  const visible=el.style.display!=='none';
+  el.style.display=visible?'none':'block';
+  if(btn) btn.textContent=visible?'▶':'▼';
+}
+
+// ─── CONTROLE DE VALIDADES (RT) ───
+function renderValidades(){
+  // Integrado ao renderStock — não precisa de função separada
+  renderStock();
+}
+
+function salvarValidadeRTInline(itemId, novaData){
+  const stock=getStock();
+  const item=stock.find(i=>i.id===itemId);
+  if(!item) return;
+  item.validade = novaData;
+  setStock(stock);
+  renderStock();
+  showToast(novaData ? '✅ Validade salva!' : '🗑️ Validade removida.');
+}
+
+function salvarValidadeLote(itemId, loteIdx, novaData){
+  const stock=getStock();
+  const item=stock.find(i=>i.id===itemId);
+  if(!item||!item.lotes?.[loteIdx]) return;
+  item.lotes[loteIdx].validade = novaData;
+  setStock(stock);
+  renderStock();
+  showToast('✅ Validade do lote salva!');
+}
+
+function salvarValidadeRT(itemId){
+  const el = qid('val_rt_'+itemId);
+  if(!el) return;
+  const stock = getStock();
+  const item = stock.find(i=>i.id===itemId);
+  if(!item) return;
+  item.validade = el.value;
+  setStock(stock);
+  renderValidades();
+  renderStock();
+  showToast('✅ Validade atualizada: '+item.name);
+}
+
+function limparValidadeRT(itemId){
+  const stock = getStock();
+  const item = stock.find(i=>i.id===itemId);
+  if(!item) return;
+  item.validade = '';
+  setStock(stock);
+  const el = qid('val_rt_'+itemId);
+  if(el) el.value = '';
+  renderValidades();
+  renderStock();
+  showToast('🗑️ Validade removida: '+item.name);
+}
+
+// ─── CONFIGURAR ESTOQUE (RT) ───
+function renderCfgEstoque(){
+  const stock=getStock();
+  const busca=(qid('cfg-stk-busca')?.value||'').toLowerCase();
+  const catFiltro=qid('cfg-stk-cat')?.value||'';
+
+  // Popular categorias no select
+  const catSel=qid('cfg-stk-cat');
+  if(catSel && catSel.options.length<=1){
+    const cats=[...new Set(stock.map(i=>i.cat))];
+    cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;catSel.appendChild(o);});
+  }
+
+  const lista=qid('cfg-estoque-lista'); if(!lista) return;
+  let items=stock;
+  if(busca) items=items.filter(i=>i.name.toLowerCase().includes(busca)||i.cat.toLowerCase().includes(busca));
+  if(catFiltro) items=items.filter(i=>i.cat===catFiltro);
+
+  lista.innerHTML=items.map(item=>`
+    <div style="background:var(--dark3);border:1px solid var(--border);border-radius:8px;padding:10px 12px">
+      <div style="font-weight:600;font-size:0.85rem;margin-bottom:6px">${esc(item.name)}
+        <span style="font-size:0.65rem;color:var(--muted);font-weight:400;margin-left:6px">${esc(item.cat)}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end">
+        <div>
+          <div style="font-size:0.65rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Qtd padrão (RT)</div>
+          <input class="fi" type="number" min="0" id="cfg_qtd_${esc(item.id)}"
+            value="${item.qtd_rt!==null&&item.qtd_rt!==undefined?item.qtd_rt:''}"
+            placeholder="0 = ocultar" style="padding:6px 8px;font-size:0.82rem">
+        </div>
+        <div>
+          <div style="font-size:0.65rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Mínimo alerta</div>
+          <input class="fi" type="number" min="0" id="cfg_min_${esc(item.id)}"
+            value="${item.min}"
+            placeholder="mín" style="padding:6px 8px;font-size:0.82rem">
+        </div>
+        <div>
+          <div style="font-size:0.65rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Unidade</div>
+          <select class="fi" id="cfg_unit_${esc(item.id)}" style="padding:6px 8px;font-size:0.82rem">
+            ${['un','amp','frs','bl','rl','cx','ml','g','kg','comp'].map(u=>`<option value="${u}"${item.unit===u?' selected':''}>${u}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function salvarCfgEstoque(){
+  const stock=getStock();
+  stock.forEach(item=>{
+    const qtdEl=qid('cfg_qtd_'+item.id);
+    const minEl=qid('cfg_min_'+item.id);
+    const unitEl=qid('cfg_unit_'+item.id);
+    if(qtdEl) item.qtd_rt = qtdEl.value===''?null:parseInt(qtdEl.value)||0;
+    if(minEl) item.min = parseInt(minEl.value)||0;
+    if(unitEl) item.unit = unitEl.value;
+  });
+  setStock(stock);
+  closeModal('modal-cfg-estoque');
+  renderStock();
+  showToast('✅ Configuração do estoque salva!');
+}
 
 function submitUso(){
   if(!lockSubmit('uso',3000)){showToast('⏳ Aguarde...');return}
   const item=qid('uso-item').value.trim(), qtd=parseInt(qid('uso-qtd').value)||0;
   if(!item||qtd<1){showToast('❌ Informe item e quantidade.');return}
-  if(qtd>9999){showToast('❌ Quantidade inválida.');return}
   const stock=getStock(), si=stock.find(i=>i.name===item);
-  if(si){if(si.qty<qtd&&!confirm(`Estoque insuficiente (${si.qty}). Continuar?`))return;si.qty=Math.max(0,si.qty-qtd);setStock(stock)}
+  if(si){
+    // Alertar se vencido
+    if(si.validade){
+      const hoje=new Date().toISOString().slice(0,10);
+      if(si.validade<hoje&&!confirm(`⚠️ ATENÇÃO: ${item} está VENCIDO (${si.validade}). Continuar mesmo assim?`)) return;
+    }
+    if(si.qty<qtd&&!confirm(`Estoque insuficiente (${si.qty}). Continuar?`)) return;
+    si.qty=Math.max(0,si.qty-qtd);
+    setStock(stock);
+  }
   const amb=qs('input[name="uso_amb"]:checked');
   const ambObj=amb?getAmb(amb.value)||{prefixo:amb.value,placa:'—'}:{prefixo:'—',placa:'—'};
   const rec={id:'USO-'+uid(),dt:qid('uso-dt').value||nowStr(),amb:`${ambObj.prefixo} (${ambObj.placa})`,item,qtd,pac:qid('uso-pac').value,resp:qid('uso-resp').value,obs:qid('uso-obs').value,usuario:CU.nome};
@@ -1802,39 +2372,138 @@ function renderUso(){
   if(!usos.length){tbody.innerHTML='<tr><td colspan="6" class="empty">Nenhum uso registrado.</td></tr>';return}
   tbody.innerHTML=usos.map(r=>`<tr>
     <td style="font-size:0.78rem">${esc(r.dt)}</td><td><span class="badge b-pu">${esc(r.amb)}</span></td>
-    <td><b>${esc(r.item)}</b></td><td><span class="badge b-info">${esc(r.qtd)}</span></td>
-    <td>${esc(r.pac)||'—'}</td><td>${esc(r.resp)||'—'}</td>
+    <td><b>${esc(r.item)}</b></td><td><span class="badge b-info">${r.qtd}</span></td>
+    <td>${esc(r.pac||'—')}</td><td>${esc(r.resp||'—')}</td>
   </tr>`).join('');
 }
 
 // ═══════ USUÁRIOS ═══════
-function addUser(){
+// ─── GERAÇÃO DE SENHA ALEATÓRIA ───
+function gerarSenhaAleatoria(){
+  const chars='ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!';
+  let senha='';
+  for(let i=0;i<8;i++) senha+=chars[Math.floor(Math.random()*chars.length)];
+  qid('nu-senha').value=senha;
+  atualizarPreviewConvite();
+}
+
+// ─── PREVIEW DO CONVITE ───
+function atualizarPreviewConvite(){
+  const nome=qid('nu-nome')?.value.trim();
+  const email=qid('nu-email')?.value.trim();
+  const senha=qid('nu-senha')?.value;
+  const role=qid('nu-func')?.value;
+  const preview=qid('preview-convite');
+  const texto=qid('preview-texto');
+  if(!preview||!texto) return;
+  if(!nome&&!email){preview.style.display='none';return}
+  preview.style.display='block';
+  texto.textContent=gerarMensagemConvite(nome,email,senha,role);
+}
+
+// ─── GERAR MENSAGEM DE CONVITE ───
+function gerarMensagemConvite(nome,email,senha,role){
+  const cfg=getCfg();
+  const empresa=cfg.empresa||CU.empresa||'AmbuCheck';
+  const url='https://chamunzao.github.io/ambucheck';
+  const roleLabel={Condutor:'Condutor',Técnico:'Técnico de Enfermagem',
+    Enfermeiro:'Enfermeiro',RT:'Responsável Técnico',Administrador:'Administrador'};
+  return `Olá, ${nome||''}! 👋
+
+Você foi cadastrado no *AmbuCheck* — Sistema de Gestão de Ambulâncias da *${empresa}*.
+
+📋 *Suas credenciais de acesso:*
+• Função: ${roleLabel[role]||role||'—'}
+• E-mail: ${email||'—'}
+• Senha: ${senha||'—'}
+
+🔗 *Acesse pelo link:*
+${url}
+
+⚠️ Recomendamos trocar sua senha no primeiro acesso.
+
+Qualquer dúvida, fale com seu RT.
+_AmbuCheck — Segurança e conformidade na sua frota_ 🚑`;
+}
+
+// ─── CADASTRAR USUÁRIO ───
+function addUser(enviarWhats=false){
   if(!lockSubmit('adduser',3000)){return}
-  const nome=qid('nu-nome').value.trim(), email=qid('nu-email').value.trim();
-  const senha=qid('nu-senha').value, role=qid('nu-func').value;
+  const nome=qid('nu-nome').value.trim();
+  const email=qid('nu-email').value.trim().toLowerCase();
+  const whatsapp=qid('nu-whatsapp').value.trim().replace(/\D/g,'');
+  const senha=qid('nu-senha').value;
+  const role=qid('nu-func').value;
   if(!nome||!email||!senha){showToast('❌ Preencha nome, e-mail e senha.');return}
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showToast('❌ E-mail inválido.');return}
-  if(senha.length<6){showToast('❌ Senha mínima 6 caracteres.');return}
   if(nome.length>80){showToast('❌ Nome muito longo.');return}
   const validRoles=['Administrador','RT','Condutor','Técnico'];
   if(!validRoles.includes(role)){showToast('❌ Função inválida.');return}
+  if(senha.length<6){showToast('❌ Senha mínima 6 caracteres.');return}
   const users=getUsers();
   if(users.find(u=>u.email===email)){showToast('❌ E-mail já cadastrado.');return}
-  users.push({id:'u_'+uid(),nome,email,senha,role,companyId:cid(),criado:nowStr()});
-  setUsers(users); closeModal('modal-user'); renderUsers(); renderAmbs();
-  showToast('✅ Usuário adicionado!'); initConfig();
+  const novoUser={id:'u_'+uid(),nome,email,senha,role,whatsapp,companyId:cid(),criado:nowStr()};
+  users.push(novoUser);
+  setUsers(users);
+  // Criar no Firebase
+  if(window._fbReady){
+    window._fbFns.createUserWithEmailAndPassword(window._fbAuth,email,senha)
+      .then(cred=>window._fbFns.setDoc(
+        window._fbFns.doc(window._fbDb,'users',cred.user.uid),
+        {id:novoUser.id,firebaseUid:cred.user.uid,email,nome,role,companyId:cid(),criado:nowStr()}
+      )).catch(e=>console.warn('FB addUser:',e.message));
+  }
+  closeModal('modal-user');
+  renderUsers(); renderAmbs();
+  showToast('✅ '+nome+' adicionado!');
+  initConfig();
+  if(enviarWhats) abrirConviteWhatsApp(novoUser);
+}
+
+function addUserEEnviarWhatsApp(){ addUser(true); }
+
+// ─── ABRIR CONVITE WHATSAPP ───
+function abrirConviteWhatsApp(user){
+  const mensagem=gerarMensagemConvite(user.nome,user.email,user.senha,user.role);
+  const num=user.whatsapp?'55'+user.whatsapp:'';
+  qid('conv-nome').textContent=user.nome;
+  qid('conv-func').textContent=user.role;
+  qid('conv-mensagem').value=mensagem;
+  window._convWhatsNum=num;
+  openModal('modal-convite');
+}
+
+function abrirWhatsApp(){
+  const msg=encodeURIComponent(qid('conv-mensagem').value);
+  const num=window._convWhatsNum||'';
+  const url=num
+    ? `https://wa.me/${num}?text=${msg}`
+    : `https://wa.me/?text=${msg}`;
+  window.open(url,'_blank');
+  closeModal('modal-convite');
+}
+
+// ─── REENVIAR CONVITE ───
+function reenviarConvite(userId){
+  const user=getUsers().find(u=>u.id===userId);
+  if(!user){showToast('❌ Usuário não encontrado');return}
+  abrirConviteWhatsApp(user);
 }
 
 function renderUsers(){
   const tbody=qid('users-tbody'); if(!tbody) return;
   const users=getUsers();
-  if(!users.length){tbody.innerHTML='<tr><td colspan="5" class="empty">Nenhum usuário.</td></tr>';return}
-  const rc={Administrador:'rp-admin',RT:'rp-rt',Condutor:'rp-func',Técnico:'rp-func'};
+  if(!users.length){tbody.innerHTML='<tr><td colspan="6" class="empty">Nenhum usuário cadastrado. Clique em "+ Adicionar" para começar.</td></tr>';return}
+  const rc={Administrador:'rp-admin',RT:'rp-rt',Condutor:'rp-func',Técnico:'rp-func',Enfermeiro:'rp-rt'};
   tbody.innerHTML=users.map(u=>`<tr>
-    <td><b>${esc(u.nome)}</b></td><td>${esc(u.email)}</td>
+    <td><b>${esc(u.nome)}</b>${u.whatsapp?'<br><span style="font-size:0.7rem;color:var(--muted)">📱 '+esc(u.whatsapp)+'</span>':''}</td>
+    <td style="font-size:0.82rem">${esc(u.email)}</td>
     <td><span class="rp ${rc[u.role]||'rp-func'}">${esc(ROLE_LABEL[u.role]||u.role)}</span></td>
-    <td style="font-size:0.75rem">${esc(u.criado)||'—'}</td>
-    <td><button class="btn danger sm" onclick="removeUser('${esc(u.id)}')">Remover</button></td>
+    <td style="font-size:0.75rem">${esc(u.criado||'—')}</td>
+    <td style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn sm" style="background:#25D366;color:white" onclick="reenviarConvite('${esc(u.id)}')" title="Enviar acesso por WhatsApp">📲</button>
+      <button class="btn danger sm" onclick="removeUser('${esc(u.id)}')">Remover</button>
+    </td>
   </tr>`).join('');
 }
 
@@ -1868,7 +2537,7 @@ function renderDashboard(){
   const ac=qid('dash-alerts');
   const lowItems=getStock().filter(i=>i.qty<=i.min);
   if(!lowItems.length){if(ac)ac.innerHTML='';return}
-  if(ac)ac.innerHTML=`<div class="card"><div class="ch"><div class="ch-icon" style="background:#92400E">⚠️</div><div class="ch-title">Alertas de Estoque</div></div><div class="cb">${lowItems.map(i=>`<div class="alert red">⚠️ <b>${esc(i.name)}</b>: ${esc(i.qty)} ${esc(i.unit)} (mín: ${esc(i.min)})</div>`).join('')}</div></div>`;
+  if(ac)ac.innerHTML=`<div class="card"><div class="ch"><div class="ch-icon" style="background:#92400E">⚠️</div><div class="ch-title">Alertas de Estoque</div></div><div class="cb">${lowItems.map(i=>`<div class="alert red">⚠️ <b>${esc(i.name)}</b>: ${i.qty} ${esc(i.unit)} (mín: ${i.min})</div>`).join('')}</div></div>`;
 }
 
 // ═══════ SUPER ADMIN ═══════
@@ -1888,11 +2557,11 @@ function renderSuperAdmin(){
     const users=DB.getC(co.id,'users')||[];
     const admin=users.find(u=>u.role==='Administrador')||users[0]||{};
     return`<tr>
-      <td><b>${esc(co.nome)}</b></td><td>${esc(admin.nome)||'—'}</td>
+      <td><b>${esc(co.nome)}</b></td><td>${esc(admin.nome||'—')}</td>
       <td><span class="badge ${planoC[co.plano]||'b-gray'}">${esc(co.plano)}</span></td>
       <td>${users.length}</td><td>${(DB.getC(co.id,'ambs')||[]).length}</td>
       <td>${(DB.getC(co.id,'checklists')||[]).length}</td>
-      <td style="font-size:0.75rem">${esc(co.criado)||'—'}</td>
+      <td style="font-size:0.75rem">${esc(co.criado||'—')}</td>
     </tr>`;
   }).join('');
 }
@@ -1907,7 +2576,7 @@ function initConfig(){
   const sel=qid('cfg-rt');
   if(sel){
     sel.innerHTML='<option value="">Selecione o RT da empresa...</option>';
-    getRTs().forEach(u=>sel.innerHTML+=`<option value="${u.id}"${u.id===cfg.rtPrincipal?' selected':''}>${u.nome} (${u.role})</option>`);
+    getRTs().forEach(u=>sel.innerHTML+=`<option value="${esc(u.id)}"${u.id===cfg.rtPrincipal?' selected':''}>${esc(u.nome)} (${esc(u.role)})</option>`);
   }
 }
 
@@ -1925,7 +2594,7 @@ function salvarConfig(){
 
 function salvarGAS(){
   const url=qid('cfg-gas').value.trim();
-  if(url&&!isValidGASUrl(url)){showToast('❌ URL inválida. Use uma URL do Google Apps Script (https://script.google.com/...)');return}
+  if(url&&!isValidGASUrl(url)){showToast('❌ URL inválida. Use https://script.google.com/...');return}
   const cfg=getCfg(); cfg.gas_url=url; setCfg(cfg);
   showToast('✅ URL do Drive salva!');
 }
@@ -1933,8 +2602,8 @@ function salvarGAS(){
 // ═══════ DRIVE ═══════
 async function sendToDrive(payload){
   const cfg=getCfg(); if(!cfg.gas_url) return;
-  if(!isValidGASUrl(cfg.gas_url)){console.warn('URL do Drive inválida — ignorando envio.');return}
-  try{await fetch(cfg.gas_url,{method:'POST',body:JSON.stringify(payload),headers:{'Content-Type':'application/json'}})}catch(e){console.warn('Erro ao enviar para Drive:',e.message)}
+  if(!isValidGASUrl(cfg.gas_url)){console.warn('URL do Drive inválida.');return}
+  try{await fetch(cfg.gas_url,{method:'POST',body:JSON.stringify(payload),headers:{'Content-Type':'application/json'}})}catch(e){console.warn('Erro Drive:',e.message)}
 }
 
 // ═══════ INIT ═══════
@@ -1978,7 +2647,7 @@ function buildEscAmbSelect(){
   sel.innerHTML='<option value="">Selecione a ambulância...</option>';
   ambs.forEach(a=>{
     const t=TIPOS[a.tipo]||{icon:'🚑'};
-    sel.innerHTML+=`<option value="${a.id}">${t.icon} ${a.prefixo} (${a.placa}) — ${a.tipo||'?'}</option>`;
+    sel.innerHTML+=`<option value="${esc(a.id)}">${t.icon} ${esc(a.prefixo)} (${esc(a.placa)}) — ${esc(a.tipo||'?')}</option>`;
   });
 }
 
@@ -2000,12 +2669,12 @@ function addEscFuncRow(cargo,userId){
   const div=document.createElement('div');
   div.id=id; div.className='eq-row';
   div.innerHTML=`
-    <input class="fi" type="text" placeholder="Cargo / Função" value="${cargo||''}" style="font-size:0.82rem;padding:7px 10px">
+    <input class="fi" type="text" placeholder="Cargo / Função" value="${esc(cargo||'')}" style="font-size:0.82rem;padding:7px 10px">
     <select class="fi" style="font-size:0.82rem;padding:7px 10px">
       <option value="">Funcionário (opcional)</option>
-      ${users.map(u=>`<option value="${u.id}"${u.id===userId?' selected':''}>${u.nome} (${u.role})</option>`).join('')}
+      ${users.map(u=>`<option value="${esc(u.id)}"${u.id===userId?' selected':''}>${esc(u.nome)} (${esc(u.role)})</option>`).join('')}
     </select>
-    <button class="btn danger sm" onclick="qid('${id}').remove()" style="padding:5px 9px;width:32px;justify-content:center">✕</button>`;
+    <button class="btn danger sm" onclick="qid('${esc(id)}').remove()" style="padding:5px 9px;width:32px;justify-content:center">✕</button>`;
   qid('esc-equipe-list').appendChild(div);
 }
 
@@ -2017,6 +2686,7 @@ function getEscFuncList(){
 }
 
 function submitEscala(){
+  if(!lockSubmit('escala',3000)){showToast('⏳ Aguarde...');return}
   const ambId=qid('esc-amb').value;
   const turno=qid('esc-turno').value;
   const inicio=qid('esc-inicio').value;
@@ -2061,8 +2731,8 @@ function renderEscalaCalendar(){
   ambs.forEach(amb=>{
     const ti=TIPOS[amb.tipo]||{icon:'🚑',cor:'#888',label:'?'};
     html+=`<tr><td style="padding:8px 10px;border:1px solid var(--border);background:var(--dark3);vertical-align:middle">
-      <b style="font-size:0.82rem">${amb.prefixo}</b><br>
-      <span class="tipo-pill" style="background:${ti.cor}22;border:1px solid ${ti.cor}44;color:${ti.cor};font-size:0.67rem">${ti.icon} ${amb.tipo||'?'}</span>
+      <b style="font-size:0.82rem">${esc(amb.prefixo)}</b><br>
+      <span class="tipo-pill" style="background:${ti.cor}22;border:1px solid ${ti.cor}44;color:${ti.cor};font-size:0.67rem">${ti.icon} ${esc(amb.tipo||'?')}</span>
     </td>`;
     days.forEach(d=>{
       const ds=fmtDate(d);
@@ -2075,8 +2745,8 @@ function renderEscalaCalendar(){
             const u=users.find(x=>x.id===f.userId);
             return`<div class="esc-block-func">${u?esc(u.nome.split(' ')[0]):esc(f.cargo)}</div>`;
           }).join('');
-          html+=`<div class="esc-block" onclick="removeEscala('${e.id}')">
-            <div class="esc-block-turno">${e.turno.split('(')[0].trim()}</div>
+          html+=`<div class="esc-block" onclick="removeEscala('${esc(e.id)}')">
+            <div class="esc-block-turno">${esc(e.turno.split('(')[0].trim())}</div>
             ${names}
             <div class="esc-block-del">✕ remover</div>
           </div>`;
@@ -2106,13 +2776,13 @@ function renderEscalaTabela(){
     }).join(' | ')||'—';
     const per=e.inicio===e.fim||!e.fim?fmtDateBR(e.inicio):`${fmtDateBR(e.inicio)} → ${fmtDateBR(e.fim)}`;
     return`<tr>
-      <td><b>${amb.prefixo}</b><br><span style="font-size:0.7rem;color:var(--muted)">${amb.placa||''}</span></td>
+      <td><b>${esc(amb.prefixo)}</b><br><span style="font-size:0.7rem;color:var(--muted)">${esc(amb.placa||'')}</span></td>
       <td>${tipoPill(amb.tipo)}</td>
-      <td><span class="badge b-te">${e.turno}</span></td>
+      <td><span class="badge b-te">${esc(e.turno)}</span></td>
       <td style="font-size:0.78rem">${per}</td>
       <td style="font-size:0.78rem;max-width:200px">${eq}</td>
-      <td style="font-size:0.75rem;color:var(--muted)">${e.obs||'—'}</td>
-      <td><button class="btn danger sm" onclick="removeEscala('${e.id}')">✕</button></td>
+      <td style="font-size:0.75rem;color:var(--muted)">${esc(e.obs||'—')}</td>
+      <td><button class="btn danger sm" onclick="removeEscala('${esc(e.id)}')">✕</button></td>
     </tr>`;
   }).join('');
 }
@@ -2248,7 +2918,1224 @@ function saveKmHist(rec){
   });
 }
 
-// Auto-login duplicado removido — já existe em bloco anterior
+// ═══════════════════════════════════════════
+//  RELATÓRIOS PDF
+// ═══════════════════════════════════════════
+function showRelatorios(){
+  // Preencher filtro de ambulâncias
+  const sel = qid('rel-amb-filter');
+  if(sel){
+    const ambs = getAmbs();
+    sel.innerHTML = '<option value="">Todas as ambulâncias</option>' +
+      ambs.map(a=>`<option value="${esc(a.id)}">${esc(a.prefixo)} — ${esc(a.placa)}</option>`).join('');
+    sel.onchange = renderRelLista;
+  }
+  // Mês atual
+  const mi = qid('rel-mes-filter');
+  if(mi){
+    const d = new Date();
+    mi.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    mi.onchange = renderRelLista;
+  }
+  renderRelLista();
+  openModal('modal-relatorio');
+}
+
+function renderRelLista(){
+  const lista = qid('rel-lista');
+  if(!lista) return;
+  let chks = getChks();
+  // Filtrar por ambulância
+  const ambF = qid('rel-amb-filter')?.value;
+  if(ambF) chks = chks.filter(c => c.amb && c.amb.includes(getAmb(ambF)?.prefixo||ambF));
+  // Filtrar por mês
+  const mesF = qid('rel-mes-filter')?.value;
+  if(mesF) chks = chks.filter(c => c.data && c.data.startsWith(mesF));
+
+  if(!chks.length){
+    lista.innerHTML = '<div class="empty">Nenhum checklist encontrado para os filtros selecionados.</div>';
+    return;
+  }
+  lista.innerHTML = chks.slice(0,50).map(c => `
+    <div style="background:var(--dark3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:10px">
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:0.88rem">${esc(c.amb||'—')} · ${esc(c.turno||'—')}</div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">
+          ${esc(c.data||'—')} ${esc(c.horario||'')} · Condutor: ${esc(c.condutor||'—')}
+        </div>
+        <div style="font-size:0.72rem;color:var(--muted2);margin-top:1px">ID: ${esc(c.id||'—')}</div>
+      </div>
+      <button class="btn red sm" onclick="gerarPDF('${esc(c.id)}')">📄 PDF</button>
+    </div>
+  `).join('');
+}
+
+function gerarPDF(chkId){
+  const chks = getChks();
+  const c = chks.find(x => x.id === chkId);
+  if(!c){ showToast('❌ Checklist não encontrado'); return; }
+
+  // Verificar se jsPDF está disponível
+  if(typeof window.jspdf === 'undefined'){
+    showToast('⏳ Carregando gerador de PDF...'); 
+    setTimeout(()=>gerarPDF(chkId), 1000); 
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  const cfg = getCfg();
+  const empresa = cfg.empresa || CU.empresa || 'Empresa';
+  const rt = CU.nome || '—';
+
+  // Cores
+  const vermelho = [224, 32, 32];
+  const escuro = [15, 18, 25];
+  const cinza = [100, 110, 130];
+  const branco = [255, 255, 255];
+  const verde = [34, 197, 94];
+  const vermelhoClaro = [255, 80, 80];
+  const cinzaClaro = [240, 242, 248];
+
+  let y = 0;
+
+  // ── CABEÇALHO ──
+  doc.setFillColor(...vermelho);
+  doc.rect(0, 0, 210, 38, 'F');
+
+  doc.setTextColor(...branco);
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.text('AmbuCheck', 14, 14);
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Sistema de Gestão de Frotas de Ambulâncias', 14, 21);
+
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text('RELATÓRIO DE CHECKLIST', 14, 30);
+
+  // Protocolo no canto direito
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Protocolo: ${c.id}`, 196, 10, {align:'right'});
+  doc.text(`Emitido em: ${new Date().toLocaleString('pt-BR')}`, 196, 16, {align:'right'});
+
+  y = 46;
+
+  // ── BLOCO EMPRESA ──
+  doc.setFillColor(...cinzaClaro);
+  doc.rect(14, y-5, 182, 22, 'F');
+  doc.setTextColor(...escuro);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('EMPRESA / INSTITUIÇÃO', 18, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.text(empresa, 18, y+7);
+
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('RESPONSÁVEL TÉCNICO (RT)', 130, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.text(rt, 130, y+7);
+  y += 26;
+
+  // ── IDENTIFICAÇÃO ──
+  doc.setFillColor(...vermelho);
+  doc.rect(14, y, 182, 7, 'F');
+  doc.setTextColor(...branco);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('1. IDENTIFICAÇÃO', 18, y+5);
+  y += 11;
+
+  const campos1 = [
+    ['Ambulância', c.amb||'—'],
+    ['Turno', c.turno||'—'],
+    ['Data', c.data||'—'],
+    ['Horário', c.horario||'—'],
+    ['Condutor', c.condutor||'—'],
+    ['KM Início', c.hodometro||'—'],
+    ['KM Fim', c.km_fim||'—'],
+    ['Combustível', c.combustivel||'—'],
+  ];
+
+  doc.setTextColor(...escuro);
+  let col = 0;
+  campos1.forEach(([label, val], i) => {
+    const cx = col === 0 ? 18 : 110;
+    const row = Math.floor(i/2);
+    const cy = y + row*10;
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...cinza);
+    doc.text(label.toUpperCase(), cx, cy);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...escuro);
+    doc.text(String(val), cx, cy+5);
+    col = col === 0 ? 1 : 0;
+  });
+  y += Math.ceil(campos1.length/2)*10 + 4;
+
+  // Temperatura
+  if(c.temp_int || c.temp_ext){
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...cinza);
+    doc.text('TEMP. INTERNA', 18, y);
+    doc.text('TEMP. EXTERNA', 110, y);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...escuro);
+    doc.text(c.temp_int ? c.temp_int+'°C' : '—', 18, y+5);
+    doc.text(c.temp_ext ? c.temp_ext+'°C' : '—', 110, y+5);
+    y += 12;
+  }
+
+  // ── MECÂNICA ──
+  y += 2;
+  doc.setFillColor(...vermelho);
+  doc.rect(14, y, 182, 7, 'F');
+  doc.setTextColor(...branco);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('2. VERIFICAÇÃO MECÂNICA', 18, y+5);
+  y += 10;
+
+  const mec = [
+    ['Água (arrefecimento)', c.m_agua],
+    ['Óleo do motor', c.m_oleo],
+    ['Fluido de freios', c.m_freios],
+    ['Fluido D. Hidráulica', c.m_hidraulica],
+    ['Func. Geral do Motor', c.m_motor_geral],
+    ['A/C Cabine', c.m_ac_cabine],
+    ['A/C Salão', c.m_ac_salao],
+  ];
+
+  mec.forEach(([label, val], i) => {
+    const cx = (i%2===0) ? 18 : 110;
+    const row = Math.floor(i/2);
+    const cy = y + row*8;
+    const ok = val === 'NORMAL';
+    const nok = val === 'BAIXO';
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...escuro);
+    doc.text(label, cx, cy);
+    if(val){
+      doc.setFillColor(...(ok ? verde : vermelhoClaro));
+      doc.roundedRect(cx+60, cy-4, ok ? 18 : 15, 5, 1.5, 1.5, 'F');
+      doc.setTextColor(...branco);
+      doc.setFontSize(6.5);
+      doc.setFont('helvetica', 'bold');
+      doc.text(ok ? 'NORMAL' : 'BAIXO', cx+61, cy-0.5);
+    }
+  });
+  y += Math.ceil(mec.length/2)*8 + 4;
+
+  // ── SISTEMA ELÉTRICO ──
+  if(y > 230){ doc.addPage(); y = 20; }
+  doc.setFillColor(...vermelho);
+  doc.rect(14, y, 182, 7, 'F');
+  doc.setTextColor(...branco);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('3. SISTEMA ELÉTRICO', 18, y+5);
+  y += 10;
+
+  const el = Object.entries(c).filter(([k]) => k.startsWith('el_'));
+  if(el.length){
+    el.forEach(([k, val], i) => {
+      const cx = (i%2===0) ? 18 : 110;
+      const row = Math.floor(i/2);
+      const cy = y + row*8;
+      const label = k.replace('el_','').replace(/_/g,' ');
+      const ok = val === 'PRESENTE';
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...escuro);
+      doc.text(label, cx, cy);
+      if(val){
+        doc.setFillColor(...(ok ? verde : vermelhoClaro));
+        doc.roundedRect(cx+60, cy-4, 20, 5, 1.5, 1.5, 'F');
+        doc.setTextColor(...branco);
+        doc.setFontSize(6.5);
+        doc.setFont('helvetica', 'bold');
+        doc.text(ok ? 'PRESENTE' : 'AUSENTE', cx+61, cy-0.5);
+      }
+    });
+    y += Math.ceil(el.length/2)*8 + 4;
+  } else {
+    doc.setTextColor(...cinza);
+    doc.setFontSize(8);
+    doc.text('Sem itens elétricos registrados.', 18, y+3);
+    y += 10;
+  }
+
+  // ── ACESSÓRIOS ──
+  if(y > 220){ doc.addPage(); y = 20; }
+  doc.setFillColor(...vermelho);
+  doc.rect(14, y, 182, 7, 'F');
+  doc.setTextColor(...branco);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('4. ACESSÓRIOS', 18, y+5);
+  y += 10;
+
+  const ac = [
+    ['Retrovisor Direito', c.ac_retro_d],
+    ['Retrovisor Esquerdo', c.ac_retro_e],
+    ['Estepe', c.ac_estepe],
+    ['Chave de Roda', c.ac_chave_roda],
+    ['Triângulo', c.ac_triangulo],
+    ['Macaco', c.ac_macaco],
+    ['Bancos', c.ac_bancos],
+    ['Tapetes', c.ac_tapetes],
+    ['Documentos', c.ac_docs],
+    ['Rádio Base', c.ac_radio],
+    ['Extintor Geral', c.ac_extintor_g],
+    ['Extintor Motorista', c.ac_extintor_m],
+  ].filter(([,v]) => v);
+
+  ac.forEach(([label, val], i) => {
+    const cx = (i%2===0) ? 18 : 110;
+    const row = Math.floor(i/2);
+    const cy = y + row*8;
+    const ok = val === 'PRESENTE';
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...escuro);
+    doc.text(label, cx, cy);
+    if(val){
+      doc.setFillColor(...(ok ? verde : vermelhoClaro));
+      doc.roundedRect(cx+55, cy-4, ok ? 18 : 15, 5, 1.5, 1.5, 'F');
+      doc.setTextColor(...branco);
+      doc.setFontSize(6.5);
+      doc.setFont('helvetica', 'bold');
+      doc.text(ok ? 'PRESENTE' : 'AUSENTE', cx+56, cy-0.5);
+    }
+  });
+  y += Math.ceil(ac.length/2)*8 + 4;
+
+  // ── PNEUS E LIMPEZA ──
+  if(y > 230){ doc.addPage(); y = 20; }
+  doc.setFillColor(...vermelho);
+  doc.rect(14, y, 182, 7, 'F');
+  doc.setTextColor(...branco);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('5. PNEUS, LIMPEZA E OXIGÊNIO', 18, y+5);
+  y += 10;
+
+  const out5 = [
+    ['Pneus Calibrados', c.pneus],
+    ['Limpeza Interna', c.limp_int],
+    ['Limpeza Externa', c.limp_ext],
+    ['Cilindro 01', c.cil01],
+    ['Cilindro 02', c.cil02],
+    ['Cilindro Pequeno', c.cil03],
+  ].filter(([,v]) => v);
+
+  out5.forEach(([label, val], i) => {
+    const cx = (i%2===0) ? 18 : 110;
+    const row = Math.floor(i/2);
+    const cy = y + row*8;
+    const ok = val === 'SIM' || val === 'LIMPA';
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...escuro);
+    doc.text(label, cx, cy);
+    doc.setFillColor(...cinzaClaro);
+    doc.roundedRect(cx+55, cy-4, 30, 5, 1.5, 1.5, 'F');
+    doc.setTextColor(...escuro);
+    doc.setFontSize(6.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text(String(val), cx+56, cy-0.5);
+  });
+  y += Math.ceil(out5.length/2)*8 + 4;
+
+  // ── KM SAÍDAS ──
+  if(c.km_saidas && c.km_saidas.length){
+    if(y > 220){ doc.addPage(); y = 20; }
+    doc.setFillColor(...vermelho);
+    doc.rect(14, y, 182, 7, 'F');
+    doc.setTextColor(...branco);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('6. SAÍDAS DO TURNO', 18, y+5);
+    y += 10;
+    c.km_saidas.forEach((s, i) => {
+      doc.setTextColor(...escuro);
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${i+1}. KM: ${s.km} · Hora: ${s.hora} · Obs: ${s.obs||'—'}`, 18, y);
+      y += 6;
+    });
+    y += 4;
+  }
+
+  // ── INTERCORRÊNCIAS ──
+  if(c.intercorrencias){
+    if(y > 230){ doc.addPage(); y = 20; }
+    doc.setFillColor(...[255, 243, 205]);
+    doc.rect(14, y, 182, 5, 'F');
+    doc.setTextColor([146, 64, 14]);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('⚠ INTERCORRÊNCIAS', 18, y+3.5);
+    y += 8;
+    doc.setTextColor(...escuro);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    const lines = doc.splitTextToSize(c.intercorrencias, 180);
+    doc.text(lines, 18, y);
+    y += lines.length * 5 + 4;
+  }
+
+  // ── ASSINATURA DO RT ──
+  if(y > 220){ doc.addPage(); y = 20; }
+  y += 4;
+  doc.setDrawColor(...cinza);
+  doc.setLineWidth(0.3);
+  doc.line(14, y, 196, y);
+  y += 8;
+
+  doc.setFillColor(...cinzaClaro);
+  doc.rect(14, y, 85, 28, 'F');
+  doc.setFillColor(...cinzaClaro);
+  doc.rect(111, y, 85, 28, 'F');
+
+  doc.setTextColor(...cinza);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.text('ASSINATURA DO RESPONSÁVEL TÉCNICO (RT)', 18, y+5);
+  doc.text('ASSINATURA DO CONDUTOR', 115, y+5);
+
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...escuro);
+  doc.text(rt, 18, y+20);
+  doc.text(c.condutor||'—', 115, y+20);
+
+  doc.setFontSize(7);
+  doc.setTextColor(...cinza);
+  doc.text(`CRM/COREN: _______________`, 18, y+25);
+  doc.text(`CPF: _______________`, 115, y+25);
+  y += 36;
+
+  // ── RODAPÉ ──
+  const pageCount = doc.getNumberOfPages();
+  for(let p=1; p<=pageCount; p++){
+    doc.setPage(p);
+    doc.setFillColor(...vermelho);
+    doc.rect(0, 285, 210, 12, 'F');
+    doc.setTextColor(...branco);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.text('AmbuCheck — Sistema de Gestão de Frotas de Ambulâncias', 14, 292);
+    doc.text(`Página ${p} de ${pageCount}`, 196, 292, {align:'right'});
+    doc.text(`Protocolo: ${c.id}`, 105, 292, {align:'center'});
+  }
+
+  // Salvar PDF
+  const filename = `AmbuCheck_${c.id}_${(c.data||'').replace(/-/g,'')}.pdf`;
+  doc.save(filename);
+  showToast('✅ PDF gerado: ' + filename);
+}
+
+// ═══════════════════════════════════════════
+//  CHECKLIST MULTI-ROLE
+// ═══════════════════════════════════════════
+
+// Dados de medicação avançada (Enfermeiro)
+const MED_AVANCADA = [
+  'ATROPINA 10','ÁGUA DESTILADA 10','ADRENALINA 15','AMIODARONA 02',
+  'ACIDO TRANEXÂMICO 04','AAS 03','ATENOLOL 50mg 03','ATENSINA 0,150mg 03',
+  'BUSCOPAM COMPOSTO 03','BROMOPRIDA 03','CETOPROFENO EV 03','CLORPROMAZINA 02',
+  'COMPLEXO B 01','CYANOKIT 01','CIMETIDINA 03','CLOPIDOGREL 75mg 05',
+  'CAPTOPRIL 25mg 03','CLONIDINA 100mg 03','DIPIRONA EV 05','DIAZEPAM IM 05',
+  'DOPAMINA 01','DOLANTINA 03','DEXAMETASONA EV 03','DRAMIN B6 03',
+  'DOBUTAMINA 01','DIAZEPAM VO 10mg 03','FUROSEMIDA EV 03','FENERGAN IM 03',
+  'FENTANIL 01','FENOBARBITAL EV 02','FENOBARBITAL VO 02','GLICOSE 25% 15',
+  'HALDOL 05','HIDROCLOROTIAZIDA 50mg VO 03','ISORDIL VO 5mg','LIDOCAINA 01',
+  'MIDAZOLAM 05','MORFINA 05','METILDOPA 500mg VO 03','KETAMIN EV 01',
+  'ONDASETRONA 03','PLASIL EV 03','PROPANOLOL VO 03','PROMETAZINA VO 02',
+  'SOLUCORTEF EV 03','SALBUTAMOL 01','TERBUTALINA 02','TRAMAL 03',
+  'AGULHA 13X4,5 03','AGULHA 25X7 03','AGULHA 40X12 03',
+  'SERINGAS 03-05-10-20ml 03','SORO FISIOLÓGICO 250ml 01','EQUIPO/POLIFIX 01','DIVP 20-22-24 02'
+];
+
+// Dados de medicação básica (Técnico)
+const MED_BASICA = [
+  'Agua Destilada 10','AAS VO 03','Aminofilina 02','Atropina 05','Adrenalina 10',
+  'Amiodarona 01','Atenolol 50mg 03','Bromoprida 03','Buscopam Composto 03',
+  'Captopril 25mg 03','Cetoprofeno IM 02','Cetoprofeno EV 05','Clonidina VO 03',
+  'Clopidogrel VO 04','Clorpromazina 01','Complexo B 01','Cimetidina 02',
+  'Dipirona 05','Diazepam IM 03','Diazepam VO 03','Dexametasona EV 02',
+  'Dolantina 03','Dopamina 01','Dramin B6 01','Fenobarbital EV 02',
+  'Fenobarbital VO 03','Fenergan VO 03','Fenergan EV 03','Hidroclorotiazida VO 03',
+  'Haldol 03','Isossorbida 5mg VO 03','Furosemida 05','Glicose 50% 15',
+  'Metildopa 500mg VO 03','Midazolam EV 02','Morfina 03','Ondasetrona 02',
+  'Plasil 03','Propranolol VO 03','Paracetamol Gts 01','Salbutamol VO 01',
+  'Hidrocortizona 500mg EV 05','Terbutalina 01','Tramal 03',
+  'SF 0,9 250ml 01','Esparadrapo 01','DIVP 18-20-22-24 02',
+  'Agulhas 13x4,5 / 25x7 / 40x12 - 03','Seringas 03-05-10-20ml 03','Scalp 21-23 02'
+];
+
+// Seções semanal avançado (Enfermeiro)
+const SEMANAL_SECOES = {
+  'MALETA SINAIS VITAIS': [
+    'Estetoscópio 01','Esfignomanômetro adulto 01','Esfignomanômetro infantil 01',
+    'Esfignomanômetro obeso 01','Oxímetro 01','Lanterna Clínica 01',
+    'Termômetro 01','Termômetro Digital 01','Tesoura 01','Oxímetro de bancada 01',
+    'DIVP 14-16-18-20-22-24 02','Atadura 10 e 15cm 05','Gaze 05',
+    'SF 250ml 01','Equipo e Polifix 01','Esparadrapo 01','Garrote 01',
+    'Algodão 01','Scalp 21 e 23 03','Fita e Lanceta 10'
+  ],
+  'MALETA VIAS AÉREAS': [
+    'Reanimador Manual (Ambu) 02','Látex 02','Cadarço 04','Seringa 20ml 02',
+    'Máscara N95 03','Máscara laríngea 02','TOT 6,0-6,5-7,0-7,5-8,0-8,5 02',
+    'Maguil 01','Kit Laringoscópio 01','Guedel 2-3-4 01'
+  ],
+  'MALETA PEDIÁTRICA': [
+    'Reanimador Manual (Ambu) 02','Estetoscópio 01','Esfignomanômetro infantil 01',
+    'Pêra 01','Guedel 0-01-02 01','Extensão de O2 01','TOT 2,0-3,0-4,0-5,0-5,5 01',
+    'Óculos Nasal Inf. 01','Máscara O2 Inf. 100% 01','Kit Laringoscópio 01',
+    'Seringa 20ml 02','Fio Guia 01','Máscara Laríngea Inf. 01'
+  ],
+  'MALETA DE SOROS': [
+    'Soro Fisiológico 100ml 03','Soro Fisiológico 250ml 03',
+    'Soro Fisiológico 500ml 02','Soro Ringer 500ml 02','Soro Glicose 5% 250ml 01'
+  ],
+  'EQUIPAMENTOS E MATERIAIS — SALÃO': [
+    'DIVP 14-16-18-20-22-24 03','Atadura 10 e 15cm 10','Agulha 13x4,5 03',
+    'Agulha 25x7cm 03','Agulha 40x12 03','Anaconda 01','Avental Descartável 03',
+    'Aspirador 01','Álcool Gel de Parede 01','Álcool 70% 01','Água Oxigenada 01',
+    'Bacia e Balde 01','Bomba de Infusão 01','Capacete com Lanterna 03',
+    'Cinta Pélvica 01','Colar PP-P-M-G-GG 02','Colar Infantil 01','Coxins 04',
+    'Compressa Gaze G 05','Descarpack 01','Desfibrilador 01','Detector Fetal 01',
+    'Extintor 01','Equipo 03','Equipo de Bomba de Infusão 02','Esparadrapo 01',
+    'Fita Zebrada 01','Gel Condutor 01','Gaze 10','Garrote 01','Lacre 02',
+    'Látex 03','Lona de Transferência 01','Luva P-M-G 02','Máscara 100% 02',
+    'Maca Retrátil 01','Máscara Rígida 02','Máscara Descartável 10',
+    'Máscara Infantil 01','Máscara de 50% 01','Manta Térmica 03',
+    'Óculos de Proteção 03','Óculos Nasal 03','Polifix 03','Pote de Algodão 01',
+    'KED Adulto e Infantil 01','Kit Parto 01','Kit RN 01','Kit Queimadura 01',
+    'Kit Traqueias 01','Saco Preto Óbito 03','Scalp 21 e 23 03',
+    'Seringas 01-03-05-10-20ml 03','Sinalizador Luminoso 01','Refletor Luminoso 03',
+    'Respirador 01','Tala Azul-Amarela-Roxa-Laranja-Verde 02','Tesoura 01',
+    'Torniquete 01','Torpedo Pequeno 01','Torpedo Grande 02',
+    'Termômetro de Parede 01','Umidificadores 02','Sonda Aspiração 10-12-14 03'
+  ]
+};
+
+function setupChecklistByRole(){
+  if(!CU) return;
+  const role = CU.role;
+  const cfg = getCfg();
+  const acessoCompleto = cfg.chk_acesso_completo === true;
+
+  // Mostrar/ocultar blocos conforme role e configuração do RT
+  const isEnf = role === 'RT' || role === 'Administrador' || role === 'Enfermeiro' || role === 'Técnico de Enfermagem - Avançado';
+  const isTec = role === 'RT' || role === 'Administrador' || role === 'Técnico' || role === 'Técnico de Enfermagem';
+  const isCond = true; // condutor sempre vê parte mecânica
+  const isRT = role === 'RT' || role === 'Administrador' || role === 'superadmin';
+
+  // Bloco condutor (mecânico): condutor + RT + todos se acesso completo
+  const showCondutor = role === 'Condutor' || isRT || acessoCompleto;
+  const blocoCondutor = qid('bloco-condutor');
+  if(blocoCondutor) blocoCondutor.style.display = showCondutor ? '' : 'none';
+
+  // Bloco enfermeiro medicação: enfermeiro/RT
+  const showEnfMed = role === 'Enfermeiro' || isRT || acessoCompleto;
+  const blocoEnfMed = qid('bloco-enfermeiro-med');
+  if(blocoEnfMed) blocoEnfMed.style.display = showEnfMed ? '' : 'none';
+
+  // Bloco enfermeiro semanal: enfermeiro/RT
+  const showEnfSem = role === 'Enfermeiro' || isRT || acessoCompleto;
+  const blocoEnfSem = qid('bloco-enfermeiro-semanal');
+  if(blocoEnfSem) blocoEnfSem.style.display = showEnfSem ? '' : 'none';
+
+  // Bloco técnico: técnico/RT
+  const showTec = role === 'Técnico' || isRT || acessoCompleto;
+  const blocoTecMed = qid('bloco-tecnico-med');
+  if(blocoTecMed) blocoTecMed.style.display = showTec ? '' : 'none';
+
+  // Acessórios: condutor ou RT ou acesso completo
+  const blocoAc = qid('bloco-acessorios');
+  if(blocoAc) blocoAc.style.display = showCondutor ? '' : 'none';
+
+  // Renderizar grids de medicamentos
+  renderMedGrid('enf-med-rows', MED_AVANCADA, 'enf_med_');
+  renderMedGrid('tec-med-rows', MED_BASICA, 'tec_med_');
+  renderSemanalSections();
+}
+
+function getUltimoChecklist(){
+  // Buscar último checklist do profissional atual para pré-preencher
+  const chks = getChks();
+  if(!chks.length) return null;
+  // Último do mesmo role/usuário
+  return chks.find(c => c.userId === CU?.id) || chks[0];
+}
+
+function calcSituacaoValidade(validade){
+  if(!validade) return {label:'', cls:''};
+  const hoje = new Date().toISOString().slice(0,10);
+  const dias = Math.ceil((new Date(validade) - new Date(hoje)) / (1000*60*60*24));
+  if(dias < 0) return {label:'⚠️ VENCIDO', cls:'color:#FF7070;font-weight:700'};
+  if(dias === 0) return {label:'⚠️ Vence hoje!', cls:'color:#FF7070;font-weight:700'};
+  if(dias <= 7) return {label:`🔴 ${dias}d`, cls:'color:#FF7070;font-weight:700'};
+  if(dias <= 30) return {label:`⏰ ${dias}d`, cls:'color:var(--yellow);font-weight:700'};
+  return {label:'✅ OK', cls:'color:var(--green)'};
+}
+
+function renderMedGrid(containerId, items, prefix){
+  const el = qid(containerId);
+  if(!el) return;
+  const stock = getStock();
+  const ultimo = getUltimoChecklist();
+  const hoje = new Date().toISOString().slice(0,10);
+
+  el.innerHTML = items.map((item, i) => {
+    const key = prefix + i;
+    const keyVal = prefix + 'val_' + i;
+    const keySit = prefix + 'sit_' + i;
+    const keyOk  = prefix + 'ok_' + i;
+
+    // Buscar valores do último checklist
+    const ultimoMed = ultimo?.enf_med?.[item] || ultimo?.tec_med?.[item] || '';
+    const ultimoVal = ultimo?.enf_med_val?.[item] || ultimo?.tec_med_val?.[item] || '';
+
+    // Buscar validade do estoque como fallback
+    const nomeItem = item.replace(/^\d+\s*[-–]\s*/,'').slice(0,15);
+    const stkItem = stock.find(s => s.name.toLowerCase().includes(nomeItem.toLowerCase().slice(0,8)));
+    const validadePre = ultimoVal || stkItem?.validade || '';
+    const qtdPre = ultimoMed || '';
+
+    const sit = calcSituacaoValidade(validadePre);
+    const temAlteracao = validadePre && sit.label.includes('VENCIDO') ? 'border-color:var(--red)' : '';
+
+    return `<div class="gr-r" style="grid-template-columns:40px 1fr 70px 110px 90px;align-items:center;${validadePre && sit.cls.includes('FF7070') ? 'background:rgba(224,32,32,0.04);' : ''}">
+      <label style="display:flex;align-items:center;justify-content:center;cursor:pointer;padding:2px" title="Confirmar sem alteração">
+        <input type="checkbox" id="${keyOk}" onchange="marcarItemOk('${key}','${keyVal}','${keySit}','${keyOk}','${esc(qtdPre)}','${esc(validadePre)}')"
+          style="width:16px;height:16px;accent-color:var(--green)">
+      </label>
+      <span class="rl" style="font-size:0.78rem">${item}</span>
+      <input class="fi" type="text" id="${key}" value="${esc(qtdPre)}" placeholder="qtd"
+        oninput="onItemAlterado('${keyOk}','${esc(item)}','qtd',this.value,'${esc(qtdPre)}')"
+        data-original="${esc(qtdPre)}"
+        style="padding:4px 6px;font-size:0.78rem;${temAlteracao}">
+      <input class="fi" type="date" id="${keyVal}" value="${esc(validadePre)}"
+        onchange="atualizarSituacaoItem('${keySit}',this.value);onItemAlterado('${keyOk}','${esc(item)}','validade',this.value,'${esc(validadePre)}')"
+        data-original="${esc(validadePre)}"
+        style="padding:4px 6px;font-size:0.74rem">
+      <span id="${keySit}" style="font-size:0.71rem;${sit.cls}">${sit.label}</span>
+    </div>`;
+  }).join('');
+}
+
+function marcarItemOk(keyQtd, keyVal, keySit, keyOk, qtdOrig, valOrig){
+  const chk = qid(keyOk)?.checked;
+  const elQtd = qid(keyQtd);
+  const elVal = qid(keyVal);
+  if(chk){
+    // OK — restaurar valores originais e desabilitar edição visual
+    if(elQtd){ elQtd.value=qtdOrig; elQtd.style.opacity='0.6'; elQtd.readOnly=true; }
+    if(elVal){ elVal.value=valOrig; elVal.style.opacity='0.6'; elVal.readOnly=true; }
+    atualizarSituacaoItem(keySit, valOrig);
+  } else {
+    // Desmarcar OK — habilitar edição
+    if(elQtd){ elQtd.style.opacity='1'; elQtd.readOnly=false; }
+    if(elVal){ elVal.style.opacity='1'; elVal.readOnly=false; }
+  }
+}
+
+function onItemAlterado(keyOk, nomeItem, campo, novoValor, valorOriginal){
+  const elOk = qid(keyOk);
+  if(!elOk) return;
+  // Se valor mudou, desmarcar OK automaticamente
+  if(novoValor !== valorOriginal){
+    elOk.checked = false;
+    // Marcar visualmente que foi alterado
+    elOk.closest('.gr-r').style.borderLeft = '3px solid var(--yellow)';
+  } else {
+    elOk.closest('.gr-r').style.borderLeft = '';
+  }
+}
+
+function atualizarSituacaoItem(sitId, validade){
+  const el = qid(sitId); if(!el) return;
+  if(!validade){ el.textContent=''; el.style=''; return; }
+  const hoje = new Date().toISOString().slice(0,10);
+  const dias = Math.ceil((new Date(validade) - new Date(hoje)) / (1000*60*60*24));
+  if(dias < 0){ el.style='color:#FF7070;font-weight:700;font-size:0.72rem'; el.textContent='⚠️ VENCIDO'; }
+  else if(dias <= 30){ el.style='color:var(--yellow);font-weight:700;font-size:0.72rem'; el.textContent=`⏰ Vence ${dias}d`; }
+  else { el.style='color:var(--green);font-size:0.72rem'; el.textContent='✅ OK'; }
+}
+
+function renderSemanalSections(){
+  const el = qid('enf-semanal-sections');
+  if(!el) return;
+  const hoje = new Date().toISOString().slice(0,10);
+  const ultimo = getUltimoChecklist();
+  let html = '';
+  Object.entries(SEMANAL_SECOES).forEach(([secao, itens]) => {
+    const secKey = secao.replace(/[^a-z]/gi,'').slice(0,8);
+    html += `<div class="sec-t">${secao}</div>
+    <div class="gt" style="margin-bottom:12px">
+      <div class="gh" style="grid-template-columns:40px 1fr 60px 110px 85px">
+        <span title="OK">✓</span><span>Item</span><span>Qtd</span><span>Validade</span><span>Situação</span>
+      </div>
+      ${itens.map((item, i) => {
+        const key    = 'sem_' + secKey + '_' + i;
+        const keyVal = 'sem_val_' + secKey + '_' + i;
+        const keySit = 'sem_sit_' + secKey + '_' + i;
+        const keyOk  = 'sem_ok_'  + secKey + '_' + i;
+        // Buscar último valor salvo
+        const ultimoSec = ultimo?.enf_semanal?.[secao];
+        const qtdPre = ultimoSec?.qtd?.[item] || '';
+        const valPre = ultimoSec?.validades?.[item] || '';
+        const sit = calcSituacaoValidade(valPre);
+        return `<div class="gr-r" style="grid-template-columns:40px 1fr 60px 110px 85px;align-items:center">
+          <label style="display:flex;align-items:center;justify-content:center;cursor:pointer">
+            <input type="checkbox" id="${keyOk}" style="width:15px;height:15px;accent-color:var(--green)">
+          </label>
+          <span class="rl" style="font-size:0.76rem">${item}</span>
+          <input class="fi" type="text" id="${key}" value="${esc(qtdPre)}" placeholder="qtd"
+            data-original="${esc(qtdPre)}"
+            style="padding:4px 5px;font-size:0.74rem">
+          <input class="fi" type="date" id="${keyVal}" value="${esc(valPre)}"
+            onchange="atualizarSituacaoItem('${keySit}',this.value)"
+            data-original="${esc(valPre)}"
+            style="padding:4px 5px;font-size:0.72rem">
+          <span id="${keySit}" style="font-size:0.68rem;${sit.cls}">${sit.label}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+function coletarDadosMedicacao(items, prefix){
+  const dados = {};
+  const validades = {};
+  const alteracoes = [];
+  const ultimo = getUltimoChecklist();
+  const stock = getStock();
+
+  items.forEach((item, i) => {
+    const el    = qid(prefix + i);
+    const elVal = qid(prefix + 'val_' + i);
+    const elOk  = qid(prefix + 'ok_' + i);
+
+    const qtdAtual = el?.value || '';
+    const valAtual = elVal?.value || '';
+    const confirmadoOk = elOk?.checked;
+
+    // Valores anteriores
+    const qtdAnterior = el?.dataset?.original || '';
+    const valAnterior = elVal?.dataset?.original || '';
+
+    if(qtdAtual) dados[item] = qtdAtual;
+    if(valAtual){
+      validades[item] = valAtual;
+      // Salvar validade no estoque
+      const nomeItem = item.replace(/^\d+\s*[-–]\s*/,'').slice(0,15);
+      const stkItem = stock.find(s => s.name.toLowerCase().includes(nomeItem.toLowerCase().slice(0,8)));
+      if(stkItem && stkItem.validade !== valAtual){
+        stkItem.validade = valAtual;
+        setStock(stock);
+      }
+    }
+
+    // Registrar alterações (só se NÃO confirmou OK e algo mudou)
+    if(!confirmadoOk){
+      if(qtdAtual && qtdAtual !== qtdAnterior && qtdAnterior !== ''){
+        alteracoes.push({
+          item, campo:'quantidade',
+          anterior: qtdAnterior, novo: qtdAtual
+        });
+      }
+      if(valAtual && valAtual !== valAnterior && valAnterior !== ''){
+        alteracoes.push({
+          item, campo:'validade',
+          anterior: valAnterior, novo: valAtual
+        });
+      }
+      // Item novo (sem anterior) com validade vencida → registrar alerta
+      if(valAtual && !valAnterior){
+        const hoje = new Date().toISOString().slice(0,10);
+        if(valAtual < hoje){
+          alteracoes.push({
+            item, campo:'validade_vencida',
+            anterior: '—', novo: valAtual
+          });
+        }
+      }
+    }
+  });
+
+  // Registrar alterações no histórico
+  if(alteracoes.length){
+    registrarAlteracoesChecklist(alteracoes, prefix.includes('enf') ? 'Medicação Avançada' : 'Medicação Básica');
+  }
+
+  return {qtd: dados, validades};
+}
+
+function registrarAlteracoesChecklist(alteracoes, secao){
+  const alts = getAlts();
+  const ambId = qs('input[name="ambulancia"]:checked')?.value;
+  const amb = getAmb(ambId)||{prefixo:'—',placa:'—'};
+  alteracoes.forEach(alt => {
+    alts.unshift({
+      id: 'ALT-'+uid(),
+      dt: nowStr(),
+      data: new Date().toISOString().slice(0,10),
+      amb: `${amb.prefixo} (${amb.placa})`,
+      tipo: 'Checklist — '+secao,
+      campo: alt.campo,
+      item: alt.item,
+      desc: `${alt.item}: ${alt.campo} alterado de "${alt.anterior}" para "${alt.novo}"`,
+      grav: alt.campo==='validade_vencida' ? 'Grave' : 'Leve',
+      status: 'Pendente',
+      resp: CU?.nome||'—',
+      userId: CU?.id||'—',
+      custo: '0'
+    });
+  });
+  setAlts(alts);
+  sendToDrive({type:'alteracao_checklist',rows:alteracoes});
+}
+
+function coletarSemanalComValidade(){
+  const dados = {};
+  const todasAlteracoes = [];
+  const stock = getStock();
+
+  Object.entries(SEMANAL_SECOES).forEach(([secao, itens]) => {
+    const secKey = secao.replace(/[^a-z]/gi,'').slice(0,8);
+    dados[secao] = {qtd:{}, validades:{}};
+    itens.forEach((item, i) => {
+      const el    = qid('sem_' + secKey + '_' + i);
+      const elVal = qid('sem_val_' + secKey + '_' + i);
+      const elOk  = qid('sem_ok_'  + secKey + '_' + i);
+      const confirmadoOk = elOk?.checked;
+      const qtdAtual = el?.value || '';
+      const valAtual = elVal?.value || '';
+      const qtdAnterior = el?.dataset?.original || '';
+      const valAnterior = elVal?.dataset?.original || '';
+
+      if(qtdAtual) dados[secao].qtd[item] = qtdAtual;
+      if(valAtual){
+        dados[secao].validades[item] = valAtual;
+        // Salvar validade no estoque
+        const nomeItem = item.replace(/^\d+\s*[-–]\s*/,'').slice(0,15);
+        const stkItem = stock.find(s => s.name.toLowerCase().includes(nomeItem.toLowerCase().slice(0,8)));
+        if(stkItem && stkItem.validade !== valAtual){ stkItem.validade = valAtual; }
+      }
+      // Registrar alterações se não confirmou OK
+      if(!confirmadoOk){
+        if(qtdAtual && qtdAtual !== qtdAnterior && qtdAnterior !== ''){
+          todasAlteracoes.push({item:`[${secao}] ${item}`, campo:'quantidade', anterior:qtdAnterior, novo:qtdAtual});
+        }
+        if(valAtual && valAtual !== valAnterior && valAnterior !== ''){
+          todasAlteracoes.push({item:`[${secao}] ${item}`, campo:'validade', anterior:valAnterior, novo:valAtual});
+        }
+      }
+    });
+  });
+
+  setStock(stock);
+  if(todasAlteracoes.length){
+    registrarAlteracoesChecklist(todasAlteracoes, 'Semanal Avançado');
+  }
+  return dados;
+}
+
+function coletarSemanal(){
+  const dados = {};
+  Object.entries(SEMANAL_SECOES).forEach(([secao, itens]) => {
+    dados[secao] = {};
+    itens.forEach((item, i) => {
+      const key = 'sem_' + secao.replace(/[^a-z]/gi,'').slice(0,8) + '_' + i;
+      const el = qid(key);
+      if(el && el.value) dados[secao][item] = el.value;
+    });
+  });
+  return dados;
+}
+
+// ═══════════════════════════════════════════
+//  PASSAGEM DE PLANTÃO
+// ═══════════════════════════════════════════
+const getPlantoes = () => DB.getC(cid(),'plantoes')||[];
+const setPlantoes = v => DB.setC(cid(),'plantoes',v);
+
+// Deslocamentos temporários durante preenchimento do modal
+window._ppDeslocamentos = [];
+
+function openModalPlantao(){
+  window._ppDeslocamentos = [];
+  renderDeslocamentosModal();
+  // Preencher dados do usuário logado
+  const ppEnf = qid('pp-enf');
+  if(ppEnf && CU) ppEnf.value = CU.nome||'';
+  // Data atual
+  const ppData = qid('pp-data');
+  if(ppData) ppData.value = new Date().toISOString().slice(0,10);
+  // Popular ambulâncias
+  const ppAmb = qid('pp-amb-sel');
+  if(ppAmb){
+    const ambs = getAmbs();
+    ppAmb.innerHTML = '<option value="">Selecione...</option>' +
+      ambs.map(a=>`<option value="${esc(a.id)}">${esc(a.prefixo)} — ${esc(a.placa)}</option>`).join('');
+  }
+  openModal('modal-plantao');
+}
+
+function addDeslocamento(){
+  const orig = qid('pp-orig')?.value.trim();
+  const dest = qid('pp-dest')?.value.trim();
+  const hora = qid('pp-hora-desl')?.value;
+  if(!orig||!dest){ showToast('❌ Informe origem e destino.'); return; }
+  window._ppDeslocamentos.push({ orig, dest, hora });
+  // Limpar campos
+  qid('pp-orig').value=''; qid('pp-dest').value=''; qid('pp-hora-desl').value='';
+  renderDeslocamentosModal();
+}
+
+function removeDeslocamento(idx){
+  window._ppDeslocamentos.splice(idx,1);
+  renderDeslocamentosModal();
+}
+
+function renderDeslocamentosModal(){
+  const el = qid('pp-deslocamentos-lista'); if(!el) return;
+  if(!window._ppDeslocamentos.length){
+    el.innerHTML='<div style="font-size:0.78rem;color:var(--muted);font-style:italic">Nenhum deslocamento registrado ainda.</div>';
+    return;
+  }
+  el.innerHTML = window._ppDeslocamentos.map((d,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;background:var(--dark3);border:1px solid var(--border);border-radius:6px;padding:7px 10px">
+      <span style="font-size:0.75rem;flex:1">
+        📍 <b>${esc(d.orig)}</b> → <b>${esc(d.dest)}</b>${d.hora?' · '+esc(d.hora):''}
+      </span>
+      <button onclick="removeDeslocamento(${i})" style="background:none;border:none;color:var(--muted2);cursor:pointer;font-size:0.8rem">✕</button>
+    </div>`).join('');
+}
+
+function salvarPlantao(){
+  if(!lockSubmit('plantao',3000)){showToast('⏳ Aguarde...');return}
+  const enf   = qid('pp-enf')?.value.trim();
+  const ambId = qid('pp-amb-sel')?.value;
+  const turno = qs('input[name="pp_turno"]:checked')?.value;
+  const chk   = qs('input[name="pp_chk"]:checked')?.value;
+  if(!enf||!ambId||!turno||!chk){
+    showToast('❌ Preencha enfermeiro, ambulância, turno e checklist.'); return;
+  }
+  const amb = getAmb(ambId)||{prefixo:ambId,placa:'—'};
+  const rec = {
+    id: 'PP-'+uid(),
+    dt: nowStr(),
+    data: qid('pp-data')?.value||new Date().toISOString().slice(0,10),
+    enf,
+    userId: CU?.id||'',
+    ambId,
+    amb: `${amb.prefixo} (${amb.placa})`,
+    turno,
+    chk_realizado: chk,
+    atividades: qid('pp-atividades')?.value.trim()||'',
+    intercorrencias: qid('pp-intercorrencias')?.value.trim()||'',
+    deslocamentos: [...(window._ppDeslocamentos||[])],
+    obs: qid('pp-obs')?.value.trim()||''
+  };
+  const plantoes = getPlantoes();
+  plantoes.unshift(rec);
+  setPlantoes(plantoes);
+  sendToDrive({type:'plantao', row: Object.values(rec)});
+  // Limpar campos
+  ['pp-enf','pp-atividades','pp-intercorrencias','pp-obs'].forEach(id=>{const e=qid(id);if(e)e.value='';});
+  window._ppDeslocamentos=[];
+  closeModal('modal-plantao');
+  renderPlantao();
+  showToast('✅ Passagem de plantão registrada! ID: '+rec.id);
+}
+
+function renderPlantao(){
+  const lista = qid('pp-lista'); if(!lista) return;
+  let plantoes = getPlantoes();
+
+  // Popular filtro de ambulâncias
+  const filtAmb = qid('pp-filtro-amb');
+  if(filtAmb && filtAmb.options.length<=1){
+    getAmbs().forEach(a=>{
+      const o=document.createElement('option'); o.value=a.id; o.textContent=`${a.prefixo} — ${a.placa}`; filtAmb.appendChild(o);
+    });
+  }
+  // Definir mês atual no filtro se vazio
+  const filtMes = qid('pp-filtro-mes');
+  if(filtMes && !filtMes.value){
+    const d=new Date(); filtMes.value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  }
+
+  // Aplicar filtros
+  const ambF  = filtAmb?.value||'';
+  const mesF  = filtMes?.value||'';
+  const busca = (qid('pp-busca')?.value||'').toLowerCase();
+  if(ambF)  plantoes = plantoes.filter(p=>p.ambId===ambF);
+  if(mesF)  plantoes = plantoes.filter(p=>p.data?.startsWith(mesF));
+  if(busca) plantoes = plantoes.filter(p=>
+    p.enf?.toLowerCase().includes(busca)||
+    p.atividades?.toLowerCase().includes(busca)||
+    p.intercorrencias?.toLowerCase().includes(busca)||
+    p.amb?.toLowerCase().includes(busca)
+  );
+
+  // Último registro resumido
+  const resumoEl = qid('pp-resumo-atual');
+  const ultimoCard = qid('pp-ultimo-card');
+  const ultimo = getPlantoes()[0];
+  if(ultimo && resumoEl && ultimoCard){
+    resumoEl.style.display='';
+    const chkColor = ultimo.chk_realizado==='SIM'?'var(--green)':ultimo.chk_realizado==='PARCIAL'?'var(--yellow)':'#FF7070';
+    const chkLabel = {SIM:'✅ Realizado',NAO:'❌ Não realizado',PARCIAL:'⚠️ Parcial'}[ultimo.chk_realizado]||'—';
+    ultimoCard.innerHTML=`
+      <div style="background:var(--dark3);border:1px solid var(--border);border-radius:8px;padding:12px 14px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          <span class="badge b-gray">${esc(ultimo.amb)}</span>
+          <span class="badge b-gray">${esc(ultimo.turno)}</span>
+          <span class="badge b-gray">${esc(ultimo.data)}</span>
+          <span style="font-size:0.75rem;color:${chkColor};font-weight:700">${chkLabel}</span>
+        </div>
+        <div style="font-size:0.78rem;color:var(--muted)">Enfermeiro: <b style="color:var(--text)">${esc(ultimo.enf)}</b></div>
+        ${ultimo.atividades?`<div style="font-size:0.78rem;margin-top:4px;color:var(--muted)">Atividades: <span style="color:var(--text)">${esc(ultimo.atividades.slice(0,120))}${ultimo.atividades.length>120?'...':''}</span></div>`:''}
+        ${ultimo.intercorrencias?`<div style="font-size:0.78rem;margin-top:4px;color:var(--yellow)">⚠️ ${esc(ultimo.intercorrencias.slice(0,100))}${ultimo.intercorrencias.length>100?'...':''}</div>`:''}
+      </div>`;
+  }
+
+  if(!plantoes.length){
+    lista.innerHTML='<div class="empty">Nenhuma passagem de plantão registrada.</div>'; return;
+  }
+
+  lista.innerHTML = plantoes.map(p=>{
+    const chkColor = p.chk_realizado==='SIM'?'var(--green)':p.chk_realizado==='PARCIAL'?'var(--yellow)':'#FF7070';
+    const chkLabel = {SIM:'✅ Checklist realizado',NAO:'❌ Checklist NÃO realizado',PARCIAL:'⚠️ Checklist parcial'}[p.chk_realizado]||'—';
+    const desl = p.deslocamentos||[];
+    return `
+      <div style="background:var(--dark3);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+        <!-- Header do card -->
+        <div style="background:var(--dark2);padding:10px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border)">
+          <span style="font-size:0.8rem;font-weight:700;color:var(--text)">${esc(p.enf)}</span>
+          <span class="badge b-gray" style="font-size:0.65rem">${esc(p.amb)}</span>
+          <span class="badge b-gray" style="font-size:0.65rem">${esc(p.turno)}</span>
+          <span class="badge b-gray" style="font-size:0.65rem">${esc(p.data)}</span>
+          <span style="margin-left:auto;font-size:0.72rem;color:${chkColor};font-weight:700">${chkLabel}</span>
+        </div>
+        <!-- Corpo -->
+        <div style="padding:10px 14px;display:grid;gap:8px">
+          ${p.atividades?`
+            <div>
+              <div style="font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:3px">📋 Atividades do turno</div>
+              <div style="font-size:0.8rem;line-height:1.5;white-space:pre-wrap">${esc(p.atividades)}</div>
+            </div>`:''}
+          ${p.intercorrencias?`
+            <div style="background:rgba(224,130,0,0.06);border-left:3px solid var(--yellow);padding:8px 10px;border-radius:0 6px 6px 0">
+              <div style="font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--yellow);margin-bottom:3px">⚠️ Intercorrências</div>
+              <div style="font-size:0.8rem;line-height:1.5;white-space:pre-wrap">${esc(p.intercorrencias)}</div>
+            </div>`:''}
+          ${desl.length?`
+            <div>
+              <div style="font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:5px">🗺️ Deslocamentos (${desl.length})</div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                ${desl.map(d=>`
+                  <div style="display:flex;align-items:center;gap:6px;font-size:0.78rem">
+                    <span style="color:var(--muted)">📍</span>
+                    <span><b>${esc(d.orig)}</b></span>
+                    <span style="color:var(--muted)">→</span>
+                    <span><b>${esc(d.dest)}</b></span>
+                    ${d.hora?`<span style="color:var(--muted2);font-size:0.7rem">· ${esc(d.hora)}</span>`:''}
+                  </div>`).join('')}
+              </div>
+            </div>`:''}
+          ${p.obs?`
+            <div style="background:var(--dark2);border-radius:6px;padding:7px 10px">
+              <div style="font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:3px">📝 Obs / Pendências</div>
+              <div style="font-size:0.78rem;line-height:1.5;white-space:pre-wrap;color:var(--muted)">${esc(p.obs)}</div>
+            </div>`:''}
+        </div>
+        <!-- Rodapé -->
+        <div style="padding:6px 14px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:0.65rem;color:var(--muted2)">ID: ${esc(p.id)} · ${esc(p.dt)}</span>
+          <button class="btn danger sm" onclick="removePlantao('${esc(p.id)}')">Remover</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function removePlantao(id){
+  if(!confirm('Remover este registro de passagem de plantão?')) return;
+  setPlantoes(getPlantoes().filter(p=>p.id!==id));
+  renderPlantao();
+  showToast('✅ Registro removido.');
+}
+
+// Auto-login duplicado removido — ja existe no bloco anterior
 </script>
+
+<!-- MODAL PASSAGEM DE PLANTÃO -->
+<div class="modal-ov" id="modal-plantao">
+  <div class="modal-box" style="max-width:580px;max-height:92vh;overflow-y:auto">
+    <h3>🔄 Registrar Passagem de Plantão</h3>
+
+    <!-- Identificação -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div class="af">
+        <label>Enfermeiro *</label>
+        <input class="fi" type="text" id="pp-enf" placeholder="Nome completo">
+      </div>
+      <div class="af">
+        <label>Ambulância *</label>
+        <select class="fi" id="pp-amb-sel"></select>
+      </div>
+      <div class="af">
+        <label>Turno *</label>
+        <div class="rg" style="margin-top:4px">
+          <label class="rb"><input type="radio" name="pp_turno" value="07:00 MANHÃ"><span>🌅 07h</span></label>
+          <label class="rb"><input type="radio" name="pp_turno" value="13:00 TARDE"><span>☀️ 13h</span></label>
+          <label class="rb"><input type="radio" name="pp_turno" value="19:00 NOITE"><span>🌙 19h</span></label>
+          <label class="rb"><input type="radio" name="pp_turno" value="PLANTÃO M/T"><span>🔄 M/T</span></label>
+        </div>
+      </div>
+      <div class="af">
+        <label>Data</label>
+        <input class="fi" type="date" id="pp-data">
+      </div>
+    </div>
+
+    <!-- Checklist feito? -->
+    <div class="af" style="margin-bottom:12px">
+      <label>Checklist realizado neste turno? *</label>
+      <div class="rg" style="margin-top:4px">
+        <label class="rb"><input type="radio" name="pp_chk" value="SIM"><span>✅ Sim, realizado</span></label>
+        <label class="rb"><input type="radio" name="pp_chk" value="NAO"><span>❌ Não realizado</span></label>
+        <label class="rb"><input type="radio" name="pp_chk" value="PARCIAL"><span>⚠️ Parcial</span></label>
+      </div>
+    </div>
+
+    <!-- Atividades do turno -->
+    <div class="af" style="margin-bottom:12px">
+      <label>Atividades ocorridas no turno</label>
+      <textarea class="fta" id="pp-atividades" placeholder="Descreva as principais atividades realizadas durante o turno..." style="min-height:80px"></textarea>
+    </div>
+
+    <!-- Intercorrências -->
+    <div class="af" style="margin-bottom:12px">
+      <label>Intercorrências</label>
+      <textarea class="fta" id="pp-intercorrencias" placeholder="Registre ocorrências relevantes, problemas identificados, situações que o próximo enfermeiro deve saber..." style="min-height:80px"></textarea>
+    </div>
+
+    <!-- Deslocamentos -->
+    <div class="af" style="margin-bottom:8px">
+      <label>Deslocamentos do turno</label>
+      <div id="pp-deslocamentos-lista" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr auto auto;gap:6px;align-items:end">
+        <div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-bottom:3px">Origem</div>
+          <input class="fi" type="text" id="pp-orig" placeholder="Ex: Base SAMU" style="padding:6px 8px">
+        </div>
+        <div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-bottom:3px">Destino</div>
+          <input class="fi" type="text" id="pp-dest" placeholder="Ex: Hospital Regional" style="padding:6px 8px">
+        </div>
+        <div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-bottom:3px">Hora</div>
+          <input class="fi" type="time" id="pp-hora-desl" style="width:90px;padding:6px 8px">
+        </div>
+        <button class="btn ghost sm" onclick="addDeslocamento()" style="height:34px;white-space:nowrap">+ Add</button>
+      </div>
+    </div>
+
+    <!-- Observações finais -->
+    <div class="af" style="margin-bottom:14px">
+      <label>Observações gerais / Pendências</label>
+      <textarea class="fta" id="pp-obs" placeholder="Pendências, orientações para o próximo enfermeiro, materiais a repor..." style="min-height:60px"></textarea>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn red" onclick="salvarPlantao()">✅ Registrar Passagem</button>
+      <button class="btn ghost" onclick="closeModal('modal-plantao')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NOVO LOTE -->
+<div class="modal-ov" id="modal-novo-lote">
+  <div class="modal-box" style="max-width:380px">
+    <h3 id="novo-lote-titulo">Adicionar Lote</h3>
+    <div class="alert blue" style="margin-bottom:14px;font-size:0.8rem">
+      Use lotes quando o mesmo item possui <b>datas de validade diferentes</b>. Cada lote tem sua própria quantidade e validade.
+    </div>
+    <div class="af">
+      <label>Quantidade *</label>
+      <input class="fi" type="number" id="novo-lote-qty" placeholder="Ex: 3" min="1" style="margin-bottom:10px">
+    </div>
+    <div class="af">
+      <label>Data de Validade *</label>
+      <input class="fi" type="date" id="novo-lote-val">
+    </div>
+    <div class="modal-foot" style="margin-top:16px">
+      <button class="btn green" onclick="salvarNovoLote()">✅ Adicionar Lote</button>
+      <button class="btn ghost" onclick="closeModal('modal-novo-lote')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIGURAR ESTOQUE -->
+<div class="modal-ov" id="modal-cfg-estoque">
+  <div class="modal-box" style="max-width:600px;max-height:90vh;overflow-y:auto">
+    <h3>⚙️ Configurar Estoque</h3>
+    <div class="alert blue" style="margin-bottom:14px">
+      💡 Defina a quantidade padrão e o mínimo de cada item. Itens com quantidade <b>0</b> ficam ocultos no checklist dos profissionais.
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <input class="fi" type="text" id="cfg-stk-busca" placeholder="🔍 Buscar item..." oninput="renderCfgEstoque()" style="flex:1">
+      <select class="fi" id="cfg-stk-cat" onchange="renderCfgEstoque()" style="width:160px">
+        <option value="">Todas categorias</option>
+      </select>
+    </div>
+    <div id="cfg-estoque-lista" style="display:flex;flex-direction:column;gap:6px"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn green" onclick="salvarCfgEstoque()">💾 Salvar configuração</button>
+      <button class="btn ghost" onclick="closeModal('modal-cfg-estoque')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RELATÓRIO PDF -->
+<div class="modal-ov" id="modal-relatorio">
+  <div class="modal-box" style="max-width:560px">
+    <h3>📄 Relatório de Checklist</h3>
+    <div style="margin-bottom:14px">
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <select class="fi" id="rel-amb-filter" style="flex:1;min-width:140px">
+          <option value="">Todas as ambulâncias</option>
+        </select>
+        <input class="fi" type="month" id="rel-mes-filter" style="width:150px">
+      </div>
+    </div>
+    <div id="rel-lista" style="display:flex;flex-direction:column;gap:8px;max-height:380px;overflow-y:auto;margin-bottom:16px"></div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeModal('modal-relatorio')">Fechar</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
