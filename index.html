@@ -390,6 +390,7 @@ tbody td{padding:8px 13px;color:#CDD5E0;vertical-align:middle}
   <div class="topbar">
     <span class="topbar-title" id="topbar-title">Dashboard</span>
     <span class="topbar-co" id="topbar-co">—</span>
+    <span id="trial-banner" style="display:none"></span>
   </div>
   <div class="content">
 
@@ -758,16 +759,33 @@ tbody td{padding:8px 13px;color:#CDD5E0;vertical-align:middle}
     <!-- USUÁRIOS -->
     <div class="panel" id="panel-usuarios">
       <div class="card">
-        <div class="ch"><div class="ch-icon" style="background:var(--blue)">👥</div><div class="ch-title">Usuários da Empresa</div><button class="ch-btn" onclick="openModal('modal-user')">+ Adicionar</button></div>
-        <div class="tbl-wrap"><table><thead><tr><th>Nome / WhatsApp</th><th>E-mail</th><th>Função</th><th>Cadastrado em</th><th>Ações</th></tr></thead><tbody id="users-tbody"></tbody></table></div>
+        <div class="ch">
+          <div class="ch-icon" style="background:var(--blue)">👥</div>
+          <div class="ch-title">Usuários da Empresa</div>
+          <select class="fi" id="users-rt-filtro" onchange="renderUsers()" style="width:180px;padding:5px 8px;font-size:0.78rem;margin-right:8px">
+            <option value="">Todos RTs</option>
+          </select>
+          <button class="ch-btn" onclick="openModalUser()">+ Adicionar</button>
+        </div>
+        <div class="tbl-wrap"><table><thead><tr><th>Nome / WhatsApp</th><th>E-mail</th><th>Função</th><th>RT Resp.</th><th>Cadastrado</th><th>Ações</th></tr></thead><tbody id="users-tbody"></tbody></table></div>
       </div>
     </div>
 
     <!-- AMBULÂNCIAS -->
     <div class="panel" id="panel-ambulancias">
       <div class="card">
-        <div class="ch"><div class="ch-icon" style="background:var(--red)">🚑</div><div class="ch-title">Ambulâncias Cadastradas</div><button class="ch-btn" onclick="openModalAmb()">+ Cadastrar</button></div>
-        <div class="tbl-wrap"><table><thead><tr><th>Prefixo</th><th>Placa</th><th>Modelo</th><th>Ano</th><th>RT</th><th>Status</th><th>Ações</th></tr></thead><tbody id="ambs-tbody"></tbody></table></div>
+        <div class="ch">
+          <div class="ch-icon" style="background:var(--red)">🚑</div>
+          <div class="ch-title">Ambulâncias Cadastradas</div>
+          <select class="fi" id="amb-rt-filtro" onchange="renderAmbs()" style="width:180px;padding:5px 8px;font-size:0.78rem;margin-right:8px">
+            <option value="">Todos RTs</option>
+          </select>
+          <button class="ch-btn" onclick="openModalAmb()">+ Cadastrar</button>
+        </div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Prefixo / Placa</th><th>Tipo</th><th>Modelo</th><th>Equipe Fixa</th><th>RT</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead>
+          <tbody id="ambs-tbody"></tbody>
+        </table></div>
       </div>
     </div>
 
@@ -803,7 +821,7 @@ tbody td{padding:8px 13px;color:#CDD5E0;vertical-align:middle}
       <div class="stats" id="super-stats"></div>
       <div class="card">
         <div class="ch"><div class="ch-icon" style="background:var(--purple)">🏢</div><div class="ch-title">Empresas Cadastradas</div></div>
-        <div class="tbl-wrap"><table><thead><tr><th>Empresa</th><th>Admin</th><th>Plano</th><th>Usuários</th><th>Ambulâncias</th><th>Checklists</th><th>Cadastro</th></tr></thead><tbody id="super-tb"></tbody></table></div>
+        <div class="tbl-wrap"><table><thead><tr><th>Empresa</th><th>Admin</th><th>Plano</th><th>Usuários</th><th>Ambul.</th><th>Checks</th><th>Cadastro</th><th style="min-width:220px">🎁 Trial (acesso de teste)</th></tr></thead><tbody id="super-tb"></tbody></table></div>
       </div>
     </div>
 
@@ -829,13 +847,17 @@ tbody td{padding:8px 13px;color:#CDD5E0;vertical-align:middle}
     </div>
   </div>
   <div class="af"><label>Função *</label>
-    <select id="nu-func">
+    <select id="nu-func" onchange="atualizarPreviewConvite();onUserFuncChange()">
       <option value="Administrador">Administrador</option>
       <option value="RT">RT — Responsável Técnico</option>
       <option value="Enfermeiro">Enfermeiro</option>
       <option value="Técnico">Técnico de Enfermagem</option>
       <option value="Condutor" selected>Condutor</option>
     </select>
+  </div>
+  <div class="af" id="nu-rt-wrap"><label>RT Responsável</label>
+    <select id="nu-rt" class="fi"><option value="">Sem RT específico (Empresa)</option></select>
+    <span style="font-size:0.7rem;color:var(--muted)">Usado para agrupar este funcionário por RT.</span>
   </div>
   <!-- Preview do convite -->
   <div id="preview-convite" style="display:none;background:var(--dark3);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:4px">
@@ -869,23 +891,44 @@ tbody td{padding:8px 13px;color:#CDD5E0;vertical-align:middle}
 
 <!-- MODAL AMBULÂNCIA -->
 <div class="modal-ov" id="modal-amb">
-<div class="modal-box">
-  <h3>Cadastrar Ambulância</h3>
-  <div class="r2" style="margin-bottom:12px">
-    <div class="af"><label>Prefixo *</label><input type="text" id="ma-pref" placeholder="Ex: SA-01"></div>
+<div class="modal-box" style="max-width:560px">
+  <h3 id="modal-amb-title">Cadastrar Ambulância</h3>
+  <div class="r2" style="margin-bottom:10px">
+    <div class="af"><label>Prefixo *</label><input type="text" id="ma-prefixo" placeholder="Ex: SA-01"></div>
     <div class="af"><label>Placa *</label><input type="text" id="ma-placa" placeholder="Ex: JBV 5I90"></div>
     <div class="af"><label>Modelo</label><input type="text" id="ma-modelo" placeholder="Ex: Sprinter 2.2"></div>
     <div class="af"><label>Ano</label><input type="number" id="ma-ano" placeholder="2023"></div>
   </div>
-  <div class="af"><label>RT Designado</label>
-    <select id="ma-rt"><option value="">Sem RT específico (usa RT da empresa)</option></select>
+  <div class="af"><label>Tipo *</label>
+    <select id="ma-tipo" class="fi" onchange="onTipoChange()">
+      <option value="">Selecione...</option>
+      <option value="ASB">🚑 ASB — Suporte Básico</option>
+      <option value="ASA">🚑 ASA — Suporte Avançado</option>
+      <option value="UR">🚨 UR — Unidade de Resgate</option>
+      <option value="UTI">🏥 UTI Móvel</option>
+      <option value="OUT">🚑 Outro / Transporte</option>
+    </select>
+    <div id="ma-tipo-info" style="display:none;margin-top:6px;padding:6px 10px;background:var(--dark2);border:1px solid var(--border);border-radius:6px;font-size:0.74rem;color:var(--muted)">
+      Equipe recomendada: <span id="ma-tipo-desc"></span>
+    </div>
   </div>
-  <div class="modal-foot">
-    <button class="btn red" onclick="addAmb()">Cadastrar</button>
+  <div class="af"><label>RT Designado</label>
+    <select id="ma-rt" class="fi"><option value="">Sem RT específico (usa RT da empresa)</option></select>
+  </div>
+  <div class="af"><label>Equipe fixa (cargo + profissional)</label>
+    <div id="ma-equipe-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px"></div>
+    <button class="btn ghost sm" onclick="addEqRow('ma-equipe-list','','')" type="button">+ Adicionar membro</button>
+  </div>
+  <div class="modal-foot" id="modal-amb-foot">
+    <button class="btn red" onclick="saveAmb()">Cadastrar</button>
     <button class="btn ghost" onclick="closeModal('modal-amb')">Cancelar</button>
   </div>
 </div>
 </div>
+
+<style>
+.eq-row{display:grid;grid-template-columns:1fr 1fr 32px;gap:6px;align-items:center}
+</style>
 
 <!-- MODAL RT AMB -->
 <div class="modal-ov" id="modal-set-rt">
@@ -914,6 +957,48 @@ tbody td{padding:8px 13px;color:#CDD5E0;vertical-align:middle}
 </div>
 </div>
 
+<!-- MODAL ESCALA POR AMBULÂNCIA -->
+<div class="modal-ov" id="modal-escala-amb">
+<div class="modal-box" style="max-width:640px">
+  <h3 id="esc-amb-title">Escala de Plantonistas</h3>
+
+  <div class="card" style="margin-bottom:12px">
+    <div class="ch" style="padding:8px 14px"><div class="ch-title" style="font-size:0.82rem">Adicionar Plantão</div></div>
+    <div class="cb" style="padding:12px 14px">
+      <div class="r2" style="margin-bottom:8px">
+        <div><div class="fl">Data *</div><input class="fi" type="date" id="esc-amb-data"></div>
+        <div><div class="fl">Turno *</div>
+          <select class="fi" id="esc-amb-turno">
+            <option value="">Selecione...</option>
+            <option value="07:00 MANHÃ">🌅 07h Manhã</option>
+            <option value="13:00 TARDE">☀️ 13h Tarde</option>
+            <option value="19:00 NOITE">🌙 19h Noite</option>
+            <option value="PLANTÃO M/T">🔄 M/T</option>
+            <option value="PLANTÃO 24h">⏱️ 24h</option>
+          </select>
+        </div>
+      </div>
+      <div><div class="fl">Plantonistas (cargo + profissional)</div>
+        <div id="esc-amb-eq-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px"></div>
+        <button class="btn ghost sm" type="button" onclick="addEqRow('esc-amb-eq-list','','')">+ Adicionar plantonista</button>
+      </div>
+      <div style="margin-top:8px"><div class="fl">Observações</div><input class="fi" type="text" id="esc-amb-obs" placeholder="Opcional"></div>
+      <div style="margin-top:10px"><button class="btn blue" onclick="salvarEscalaAmb()">💾 Adicionar à escala</button></div>
+    </div>
+  </div>
+
+  <div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);padding:6px 0 6px">Escalas Cadastradas</div>
+  <div class="tbl-wrap" style="max-height:280px;overflow-y:auto">
+    <table><thead><tr><th>Data</th><th>Turno</th><th>Plantonistas</th><th>Obs.</th><th></th></tr></thead>
+    <tbody id="esc-amb-tbody"></tbody></table>
+  </div>
+
+  <div class="modal-foot">
+    <button class="btn ghost" onclick="closeModal('modal-escala-amb')">Fechar</button>
+  </div>
+</div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"><span id="toast-msg">✅ Salvo!</span></div>
 
@@ -929,8 +1014,23 @@ async function hashSenha(s){const enc=new TextEncoder().encode(s);const buf=awai
 const SUPER_EMAIL='admin@ambulcheck.com.br';
 const SUPER_HASH='e34f92a20532a873cb3184398070b4b82a8fa29cf48572c203dc5f0fa6158231';
 const SUPER_OBJ={id:'superadmin',nome:'Super Admin',email:SUPER_EMAIL,role:'superadmin',empresa:'AmbuCheck'};
-const ROLE_PILL  = {superadmin:'rp-super',Administrador:'rp-admin',RT:'rp-rt',Condutor:'rp-func',Técnico:'rp-func'};
-const ROLE_LABEL = {superadmin:'Super Admin',Administrador:'Admin',RT:'Responsável Técnico',Condutor:'Condutor',Técnico:'Técnico'};
+const ROLE_PILL  = {superadmin:'rp-super',Administrador:'rp-admin',RT:'rp-rt',Condutor:'rp-func',Técnico:'rp-func',Enfermeiro:'rp-func'};
+const ROLE_LABEL = {superadmin:'Super Admin',Administrador:'Admin',RT:'Responsável Técnico',Condutor:'Condutor',Técnico:'Técnico',Enfermeiro:'Enfermeiro'};
+
+// Tipos de ambulância — definem equipe mínima recomendada
+const TIPOS = {
+  ASB: {icon:'🚑', cor:'#22C55E', label:'ASB — Suporte Básico',    equipe:['Condutor','Técnico de Enfermagem']},
+  ASA: {icon:'🚑', cor:'#E02020', label:'ASA — Suporte Avançado',  equipe:['Condutor','Enfermeiro','Médico']},
+  UR:  {icon:'🚨', cor:'#F5A623', label:'UR — Unidade de Resgate', equipe:['Condutor','Enfermeiro']},
+  UTI: {icon:'🏥', cor:'#7C3AED', label:'UTI Móvel',               equipe:['Condutor','Enfermeiro','Médico']},
+  OUT: {icon:'🚑', cor:'#2563EB', label:'Outro / Transporte',      equipe:['Condutor']}
+};
+function tipoPill(t){
+  const ti = TIPOS[t];
+  if(!ti) return `<span class="badge b-gray" style="font-size:0.62rem">—</span>`;
+  return `<span class="badge" style="background:${ti.cor}22;border:1px solid ${ti.cor}44;color:${ti.cor};font-size:0.62rem">${ti.icon} ${esc(t)}</span>`;
+}
+function fmtDateBR(d){ if(!d) return ''; const [y,m,dd]=d.split('-'); return `${dd}/${m}/${y}`; }
 const DEFAULT_STOCK = [
   // ── MEDICAMENTOS – Compartimento Interno Geral ──
   {id:'acs',name:'Ácido Acetilsalicílico 100mg (Blister)',cat:'Medicamento',qty:2,min:1,unit:'bl',validade:'',qtd_rt:null},
@@ -1316,7 +1416,7 @@ const DB = {
 };
 
 // ═══════ STATE ═══════
-let CU=null, currentSugId=null, editRtAmbId=null;
+let CU=null, currentSugId=null, editRtAmbId=null, editAmbId=null, eqCounter=0, escOffset=0, escAmbFiltroId=null;
 
 // ═══════ HELPERS ═══════
 const uid=()=>Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,4).toUpperCase();
@@ -1355,6 +1455,25 @@ const getExtras=()=>DB.getC(cid(),'extras')||[];
 const setExtras=v=>DB.setC(cid(),'extras',v);
 const getCfg=()=>DB.getC(cid(),'config')||{};
 const setCfg=v=>DB.setC(cid(),'config',v);
+const getEscalas=()=>DB.getC(cid(),'escalas')||[];
+const setEscalas=v=>DB.setC(cid(),'escalas',v);
+
+// ═══════ TRIAL / LICENÇA ═══════
+// Super admin pode liberar um "trial" (teste) pra qualquer empresa via data.
+// Empresa sem trialAte → plano normal, sem restrição.
+// Empresa com trialAte >= hoje → trial ativo, pode usar.
+// Empresa com trialAte < hoje → trial expirou, bloqueia novos cadastros.
+function getCompanyTrial(coId){
+  const co = getAllCos().find(c=>c.id===coId);
+  if(!co) return {ok:false, reason:'Empresa não encontrada', trial:false};
+  if(!co.trialAte) return {ok:true, trial:false, plano:co.plano};
+  const hoje = new Date().toISOString().slice(0,10);
+  const ativo = co.trialAte >= hoje;
+  const dias  = Math.ceil((new Date(co.trialAte)-new Date(hoje))/(1000*60*60*24));
+  return ativo
+    ? {ok:true,  trial:true,  ate:co.trialAte, dias}
+    : {ok:false, trial:true,  ate:co.trialAte, dias, reason:`Trial expirou em ${co.trialAte}. Contrate um plano para continuar cadastrando.`};
+}
 const getAllCos=()=>DB.get('companies')||[];
 const setAllCos=v=>DB.set('companies',v);
 const getAmb=id=>getAmbs().find(a=>a.id===id);
@@ -1512,7 +1631,25 @@ function setupApp(){
   buildBottomNav();
   setupChecklistByRole();
   setTimeout(renderValidades, 200);
+  renderTrialBanner();
   if(CU.role==='superadmin') renderSuperAdmin();
+}
+
+function renderTrialBanner(){
+  const el=qid('trial-banner'); if(!el) return;
+  if(!CU||CU.role==='superadmin'||!cid()){el.style.display='none';return}
+  const st=getCompanyTrial(cid());
+  if(!st.trial){el.style.display='none';return}
+  el.style.display='inline-flex';
+  el.style.cssText='display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:6px;font-size:0.72rem;font-weight:700;margin-left:8px;'+
+    (st.ok ? 'background:rgba(34,197,94,0.12);color:var(--green);border:1px solid rgba(34,197,94,0.25)'
+           : 'background:rgba(224,32,32,0.12);color:#FF7070;border:1px solid rgba(224,32,32,0.25)');
+  el.innerHTML = st.ok
+    ? `🎁 Trial · ${st.dias}d restantes`
+    : `⏰ Trial expirou (${esc(st.ate)})`;
+  el.title = st.ok
+    ? `Acesso de teste até ${st.ate}`
+    : 'Seu período de testes terminou. Contrate um plano para cadastrar novos itens.';
 }
 
 // ═══════ NAV ═══════
@@ -1595,11 +1732,25 @@ function onAmbSelect(ambId){
 
 function renderAmbs(){
   const tbody=qid('ambs-tbody'); if(!tbody) return;
-  const ambs=getAmbs(), users=getUsers();
+  let ambs=getAmbs(); const users=getUsers();
+
+  // Popular filtro de RT (uma vez)
+  const selFiltro = qid('amb-rt-filtro');
+  if(selFiltro && selFiltro.options.length<=1){
+    getRTs().forEach(u=>{
+      const o=document.createElement('option');
+      o.value=u.id; o.textContent=u.nome+(u.role==='Administrador'?' (Admin)':'');
+      selFiltro.appendChild(o);
+    });
+  }
+
+  // Escopo: RT logado vê só as próprias ambulâncias; Admin pode filtrar
+  const filtroRt = (CU && CU.role==='RT') ? CU.id : (selFiltro?.value || '');
+  if(filtroRt) ambs = ambs.filter(a=>a.rt===filtroRt);
+
   if(!ambs.length){tbody.innerHTML='<tr><td colspan="7" class="empty">Nenhuma ambulância cadastrada.</td></tr>';return}
   tbody.innerHTML=ambs.map(a=>{
     const rt=users.find(u=>u.id===a.rt);
-    const ti=TIPOS[a.tipo]||{icon:'🚑',cor:'#888'};
     const eqStr=(a.equipe||[]).map(e=>{
       const u=users.find(x=>x.id===e.userId);
       return u?`${esc(e.cargo)}: <b>${esc(u.nome.split(' ')[0])}</b>`:esc(e.cargo);
@@ -1611,9 +1762,9 @@ function renderAmbs(){
       <td style="font-size:0.76rem;line-height:1.6">${eqStr}</td>
       <td>${rt?`<span class="badge b-ye">${esc(rt.nome.split(' ')[0])}</span>`:'<span class="badge b-gray">Empresa</span>'}</td>
       <td><span class="badge ${a.status==='Ativo'?'b-ok':'b-nok'}">${esc(a.status)}</span></td>
-      <td style="white-space:nowrap">
-        <button class="btn ghost sm" onclick="openSetRT('${esc(a.id)}')" style="margin-bottom:3px">RT</button>
-        <button class="btn ghost sm" onclick="openEditEquipe('${esc(a.id)}')">Equipe</button>
+      <td style="white-space:nowrap;text-align:right">
+        <button class="btn ghost sm" onclick="openEscalaAmb('${esc(a.id)}')" title="Escala de plantonistas">📅 Escala</button>
+        <button class="btn ghost sm" onclick="openEditEquipe('${esc(a.id)}')" title="Editar ambulância e equipe">✏️</button>
       </td>
     </tr>`;
   }).join('');
@@ -1692,6 +1843,11 @@ function saveAmb(){
   const tipo=qid('ma-tipo').value;
   if(!pref||!placa){showToast('❌ Prefixo e placa são obrigatórios.');return;}
   if(!tipo){showToast('❌ Selecione o tipo da ambulância.');return;}
+  // Bloqueio de trial expirado (não bloqueia edição — só novos cadastros)
+  if(!editAmbId){
+    const st=getCompanyTrial(cid());
+    if(!st.ok){showToast('⛔ '+st.reason);return;}
+  }
   const equipe=getEquipeFromList('ma-equipe-list');
   const ambs=getAmbs();
   if(editAmbId){
@@ -1720,6 +1876,75 @@ function salvarRtAmb(){
   const ambs=getAmbs(), idx=ambs.findIndex(a=>a.id===editRtAmbId);
   if(idx>=0){ambs[idx].rt=qid('set-rt-sel').value; setAmbs(ambs)}
   closeModal('modal-set-rt'); renderAmbs(); showToast('✅ RT da ambulância atualizado!');
+}
+
+// ═══════ ESCALA POR AMBULÂNCIA ═══════
+function openEscalaAmb(ambId){
+  escAmbFiltroId=ambId;
+  const amb=getAmb(ambId); if(!amb) return;
+  const ti=TIPOS[amb.tipo]||{icon:'🚑',label:amb.tipo||'?'};
+  qid('esc-amb-title').innerHTML = `${ti.icon} Escala — ${esc(amb.prefixo)} <span style="color:var(--muted);font-size:0.8rem;font-weight:400">(${esc(amb.placa)})</span>`;
+  qid('esc-amb-data').value = nowDate();
+  qid('esc-amb-turno').value = '';
+  qid('esc-amb-obs').value = '';
+  // Pré-preenche com a equipe fixa da ambulância
+  const list=qid('esc-amb-eq-list'); list.innerHTML=''; eqCounter=0;
+  if(amb.equipe && amb.equipe.length){
+    amb.equipe.forEach(e=>addEqRow('esc-amb-eq-list', e.cargo, e.userId));
+  } else {
+    addEqRow('esc-amb-eq-list','','');
+  }
+  renderEscalaAmb();
+  openModal('modal-escala-amb');
+}
+
+function salvarEscalaAmb(){
+  if(!escAmbFiltroId) return;
+  if(!lockSubmit('esc-amb',2000)){showToast('⏳ Aguarde...');return}
+  const data=qid('esc-amb-data').value;
+  const turno=qid('esc-amb-turno').value;
+  if(!data||!turno){showToast('❌ Informe data e turno.');return}
+  const equipe=getEquipeFromList('esc-amb-eq-list');
+  if(!equipe.length){showToast('❌ Adicione ao menos um plantonista.');return}
+  const escalas=getEscalas();
+  escalas.push({
+    id:'ESC-'+uid(), ambId:escAmbFiltroId, turno, inicio:data, fim:data,
+    equipe, obs:qid('esc-amb-obs').value.trim(),
+    criado:nowStr(), criadoPor:CU.nome
+  });
+  setEscalas(escalas);
+  qid('esc-amb-turno').value=''; qid('esc-amb-obs').value='';
+  renderEscalaAmb();
+  showToast('✅ Plantão adicionado à escala!');
+}
+
+function renderEscalaAmb(){
+  const tbody=qid('esc-amb-tbody'); if(!tbody) return;
+  const escalas=getEscalas()
+    .filter(e=>e.ambId===escAmbFiltroId)
+    .sort((a,b)=>b.inicio.localeCompare(a.inicio));
+  if(!escalas.length){tbody.innerHTML='<tr><td colspan="5" class="empty" style="padding:14px">Nenhum plantão cadastrado ainda.</td></tr>';return}
+  const users=getUsers();
+  tbody.innerHTML=escalas.map(e=>{
+    const eq=(e.equipe||[]).map(f=>{
+      const u=users.find(x=>x.id===f.userId);
+      return `${esc(f.cargo||'?')}${u?' — <b>'+esc(u.nome.split(' ')[0])+'</b>':''}`;
+    }).join('<br>')||'—';
+    return `<tr>
+      <td style="font-size:0.78rem;white-space:nowrap"><b>${fmtDateBR(e.inicio)}</b></td>
+      <td><span class="badge b-info" style="font-size:0.62rem">${esc(e.turno)}</span></td>
+      <td style="font-size:0.76rem;line-height:1.6">${eq}</td>
+      <td style="font-size:0.74rem;color:var(--muted)">${esc(e.obs||'—')}</td>
+      <td><button class="btn danger sm" onclick="removerEscalaAmb('${esc(e.id)}')" title="Remover">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function removerEscalaAmb(id){
+  if(!confirm('Remover este plantão da escala?')) return;
+  setEscalas(getEscalas().filter(e=>e.id!==id));
+  renderEscalaAmb();
+  showToast('✅ Plantão removido.');
 }
 
 // ═══════ CHECKLIST ═══════
@@ -2069,22 +2294,30 @@ function renderStock(){
       headerEl.className = `stk-item-header${rowBg}`;
       headerEl.style.cssText = 'display:grid;grid-template-columns:1fr 90px 150px 95px;align-items:center;padding:7px 4px;gap:8px;border-bottom:1px solid #131825';
 
+      // Botão de expandir/colapsar datas (+ quando colapsado, − quando aberto)
+      // Visível quando há qty>1 e nenhum lote ainda (para dividir em datas individuais)
+      // ou quando já existem lotes (para revelar/ocultar as datas de cada unidade)
+      const podeExpandir = usaLotes || qtyTotal > 1;
+      const toggleBtn = podeExpandir
+        ? `<button onclick="toggleLotes('${esc(item.id)}')" id="btn-lote-${esc(item.id)}"
+              title="${usaLotes?'Mostrar/ocultar datas por unidade':'Abrir para definir data de cada unidade'}"
+              style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--blue);cursor:pointer;font-size:0.85rem;padding:0 6px;line-height:1;min-width:22px;height:22px">+</button>`
+        : '';
+      const valComToggle = `<div style="display:flex;align-items:center;gap:4px">${valCampo}${toggleBtn}</div>`;
+
       if(usaLotes){
         headerEl.innerHTML = `
           <div>
             <div style="font-size:0.82rem;font-weight:600;${nameColor}">${esc(item.name)}${padrao}</div>
-            <div style="font-size:0.62rem;color:var(--muted2)">Mín: ${item.min} ${esc(item.unit)} · ${item.lotes.length} lote(s)</div>
+            <div style="font-size:0.62rem;color:var(--muted2)">Mín: ${item.min} ${esc(item.unit)} · ${item.lotes.length} unidade(s) com data</div>
           </div>
           <div style="display:flex;align-items:center;gap:4px;justify-content:center">
             <span style="font-weight:700;font-size:0.9rem;${status==='repor'?'color:#FF7070':''}">${qtyTotal}</span>
             <span style="font-size:0.68rem;color:var(--muted2)">${esc(item.unit)}</span>
-            <button onclick="adicionarLote('${esc(item.id)}')" title="Adicionar lote" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--blue);cursor:pointer;font-size:0.7rem;padding:1px 4px">+lote</button>
           </div>
-          ${valCampo}
+          ${valComToggle}
           <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px">
             ${statusBadge}
-            <button onclick="toggleLotes('${esc(item.id)}')" id="btn-lote-${esc(item.id)}"
-              style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;font-size:0.65rem;padding:1px 4px">▼</button>
           </div>`;
       } else {
         headerEl.innerHTML = `
@@ -2097,17 +2330,17 @@ function renderStock(){
             <span id="qty-${esc(item.id)}" style="min-width:22px;text-align:center;font-size:0.9rem;${status==='repor'?'color:#FF7070;font-weight:800':''}">${qtyTotal}</span>
             <span style="font-size:0.68rem;color:var(--muted2)">${esc(item.unit)}</span>
             <button class="qty-btn" onclick="chgQty('${esc(item.id)}',1)" style="width:22px;height:22px;font-size:0.85rem">+</button>
-            <button onclick="adicionarLote('${esc(item.id)}')" title="Adicionar 2º lote" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--blue);cursor:pointer;font-size:0.65rem;padding:1px 4px">+lote</button>
           </div>
-          ${valCampo}
+          ${valComToggle}
           <div style="text-align:right">${statusBadge}</div>`;
       }
       grid.appendChild(headerEl);
 
-      // ── Lotes (expandidos por padrão) ──
+      // ── Lotes (colapsados por padrão — abre via botão +/−) ──
       if(usaLotes){
         const cont = document.createElement('div');
         cont.id = `lotes-${esc(item.id)}`;
+        cont.style.display = 'none';
         const lotesOrd = [...item.lotes].sort((a,b)=>(!a.validade?1:!b.validade?-1:a.validade.localeCompare(b.validade)));
         const loteRows = lotesOrd.map((lote,idx)=>{
           const origIdx = item.lotes.indexOf(lote);
@@ -2219,12 +2452,25 @@ function removeLote(itemId, loteIdx){
 }
 
 function toggleLotes(itemId){
+  const stock=getStock();
+  const item=stock.find(i=>i.id===itemId);
+  if(!item) return;
+  // Se ainda não há lotes mas há qty>1, cria um lote por unidade (datas em branco)
+  if(!(item.lotes?.length) && (item.qty||0) > 1){
+    item.lotes = Array.from({length:item.qty},()=>({qty:1, validade:item.validade||''}));
+    item.qty = 0;
+    item.validade = '';
+    setStock(stock);
+    renderStock();
+    setTimeout(()=>toggleLotes(itemId),0); // reabre já expandido após re-render
+    return;
+  }
   const el=qid('lotes-'+itemId);
   const btn=qid('btn-lote-'+itemId);
   if(!el) return;
   const visible=el.style.display!=='none';
   el.style.display=visible?'none':'block';
-  if(btn) btn.textContent=visible?'▶':'▼';
+  if(btn) btn.textContent=visible?'+':'−';
 }
 
 // ─── CONTROLE DE VALIDADES (RT) ───
@@ -2426,6 +2672,22 @@ Qualquer dúvida, fale com seu RT.
 _AmbuCheck — Segurança e conformidade na sua frota_ 🚑`;
 }
 
+// ─── POPULAR E REAGIR NO MODAL DE USUÁRIO ───
+function onUserFuncChange(){
+  const role=qid('nu-func').value;
+  const wrap=qid('nu-rt-wrap');
+  // RT e Admin não precisam ser "assigned" a outro RT
+  if(wrap) wrap.style.display=(role==='Administrador'||role==='RT')?'none':'block';
+}
+function popularSelectRTs(selectId, selectedId){
+  const sel=qid(selectId); if(!sel) return;
+  sel.innerHTML='<option value="">Sem RT específico (Empresa)</option>';
+  getRTs().forEach(u=>{
+    const lbl=u.nome+(u.role==='Administrador'?' (Admin)':'');
+    sel.innerHTML+=`<option value="${esc(u.id)}"${u.id===(selectedId||'')?' selected':''}>${esc(lbl)}</option>`;
+  });
+}
+
 // ─── CADASTRAR USUÁRIO ───
 function addUser(enviarWhats=false){
   if(!lockSubmit('adduser',3000)){return}
@@ -2434,15 +2696,20 @@ function addUser(enviarWhats=false){
   const whatsapp=qid('nu-whatsapp').value.trim().replace(/\D/g,'');
   const senha=qid('nu-senha').value;
   const role=qid('nu-func').value;
+  const rtAssign=qid('nu-rt')?.value || '';
   if(!nome||!email||!senha){showToast('❌ Preencha nome, e-mail e senha.');return}
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showToast('❌ E-mail inválido.');return}
   if(nome.length>80){showToast('❌ Nome muito longo.');return}
-  const validRoles=['Administrador','RT','Condutor','Técnico'];
+  const validRoles=['Administrador','RT','Condutor','Técnico','Enfermeiro'];
   if(!validRoles.includes(role)){showToast('❌ Função inválida.');return}
   if(senha.length<6){showToast('❌ Senha mínima 6 caracteres.');return}
+  const stTrial=getCompanyTrial(cid());
+  if(!stTrial.ok){showToast('⛔ '+stTrial.reason);return}
   const users=getUsers();
   if(users.find(u=>u.email===email)){showToast('❌ E-mail já cadastrado.');return}
-  const novoUser={id:'u_'+uid(),nome,email,senha,role,whatsapp,companyId:cid(),criado:nowStr()};
+  // Se for RT logado cadastrando um funcionário, vincular a ele automaticamente
+  const rtFinal = (role==='Administrador'||role==='RT') ? '' : (rtAssign || (CU.role==='RT'?CU.id:''));
+  const novoUser={id:'u_'+uid(),nome,email,senha,role,whatsapp,rt:rtFinal,companyId:cid(),criado:nowStr()};
   users.push(novoUser);
   setUsers(users);
   // Criar no Firebase
@@ -2490,21 +2757,67 @@ function reenviarConvite(userId){
   abrirConviteWhatsApp(user);
 }
 
+function openModalUser(){
+  qid('nu-nome').value=''; qid('nu-email').value=''; qid('nu-whatsapp').value='';
+  qid('nu-senha').value=''; qid('nu-func').value='Condutor';
+  // Popula o select de RTs e seleciona o RT atual se o usuário logado for RT
+  popularSelectRTs('nu-rt', CU?.role==='RT'?CU.id:'');
+  onUserFuncChange();
+  const pv=qid('preview-convite'); if(pv) pv.style.display='none';
+  openModal('modal-user');
+}
+
 function renderUsers(){
   const tbody=qid('users-tbody'); if(!tbody) return;
-  const users=getUsers();
+  let users=getUsers();
+
+  // Popular filtro de RT (apenas para Admin)
+  const selFiltro = qid('users-rt-filtro');
+  if(selFiltro && selFiltro.options.length<=1){
+    getRTs().forEach(u=>{
+      const o=document.createElement('option');
+      o.value=u.id; o.textContent=u.nome+(u.role==='Administrador'?' (Admin)':'');
+      selFiltro.appendChild(o);
+    });
+  }
+
+  // Escopo: se RT estiver logado, ver só seus funcionários + ele próprio
+  const filtroRt = (CU && CU.role==='RT') ? CU.id : (selFiltro?.value || '');
+  if(filtroRt){
+    users = users.filter(u => u.rt===filtroRt || u.id===filtroRt);
+  }
+
   if(!users.length){tbody.innerHTML='<tr><td colspan="6" class="empty">Nenhum usuário cadastrado. Clique em "+ Adicionar" para começar.</td></tr>';return}
   const rc={Administrador:'rp-admin',RT:'rp-rt',Condutor:'rp-func',Técnico:'rp-func',Enfermeiro:'rp-rt'};
-  tbody.innerHTML=users.map(u=>`<tr>
-    <td><b>${esc(u.nome)}</b>${u.whatsapp?'<br><span style="font-size:0.7rem;color:var(--muted)">📱 '+esc(u.whatsapp)+'</span>':''}</td>
-    <td style="font-size:0.82rem">${esc(u.email)}</td>
-    <td><span class="rp ${rc[u.role]||'rp-func'}">${esc(ROLE_LABEL[u.role]||u.role)}</span></td>
-    <td style="font-size:0.75rem">${esc(u.criado||'—')}</td>
-    <td style="display:flex;gap:6px;flex-wrap:wrap">
-      <button class="btn sm" style="background:#25D366;color:white" onclick="reenviarConvite('${esc(u.id)}')" title="Enviar acesso por WhatsApp">📲</button>
-      <button class="btn danger sm" onclick="removeUser('${esc(u.id)}')">Remover</button>
-    </td>
-  </tr>`).join('');
+  const allUsers=getUsers();
+
+  // Agrupar por cargo/função
+  const grupos={};
+  users.forEach(u=>{ const g=u.role||'Outros'; (grupos[g]=grupos[g]||[]).push(u); });
+  const ordem=['Administrador','RT','Enfermeiro','Técnico','Condutor'];
+  const chaves=Object.keys(grupos).sort((a,b)=>{const ia=ordem.indexOf(a),ib=ordem.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});
+
+  tbody.innerHTML = chaves.map(role=>{
+    const header=`<tr><td colspan="6" style="background:var(--dark3);padding:6px 13px;font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)">${esc(ROLE_LABEL[role]||role)} — ${grupos[role].length}</td></tr>`;
+    const rows=grupos[role].map(u=>{
+      const rtUser = u.rt ? allUsers.find(x=>x.id===u.rt) : null;
+      const rtTxt = (u.role==='RT'||u.role==='Administrador')
+        ? '<span class="badge b-gray">—</span>'
+        : (rtUser ? `<span class="badge b-ye">${esc(rtUser.nome.split(' ')[0])}</span>` : '<span class="badge b-gray">Empresa</span>');
+      return `<tr>
+        <td><b>${esc(u.nome)}</b>${u.whatsapp?'<br><span style="font-size:0.7rem;color:var(--muted)">📱 '+esc(u.whatsapp)+'</span>':''}</td>
+        <td style="font-size:0.82rem">${esc(u.email)}</td>
+        <td><span class="rp ${rc[u.role]||'rp-func'}">${esc(ROLE_LABEL[u.role]||u.role)}</span></td>
+        <td style="font-size:0.75rem">${rtTxt}</td>
+        <td style="font-size:0.75rem">${esc(u.criado||'—')}</td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn sm" style="background:#25D366;color:white" onclick="reenviarConvite('${esc(u.id)}')" title="Enviar acesso por WhatsApp">📲</button>
+          <button class="btn danger sm" onclick="removeUser('${esc(u.id)}')">Remover</button>
+        </td>
+      </tr>`;
+    }).join('');
+    return header+rows;
+  }).join('');
 }
 
 function removeUser(id){
@@ -2551,19 +2864,44 @@ function renderSuperAdmin(){
     <div class="stat red"><div class="stat-icon">📋</div><div class="stat-val">${totalC}</div><div class="stat-label">Checklists totais</div></div>
     <div class="stat green"><div class="stat-icon">💰</div><div class="stat-val">${cos.length}</div><div class="stat-label">Clientes ativos</div></div>`;
   const tbody=qid('super-tb');
-  if(!cos.length){tbody.innerHTML='<tr><td colspan="7" class="empty">Nenhuma empresa.</td></tr>';return}
+  if(!cos.length){tbody.innerHTML='<tr><td colspan="8" class="empty">Nenhuma empresa.</td></tr>';return}
   const planoC={Básico:'b-gray',Padrão:'b-info',Premium:'b-pu'};
   tbody.innerHTML=cos.map(co=>{
     const users=DB.getC(co.id,'users')||[];
     const admin=users.find(u=>u.role==='Administrador')||users[0]||{};
+    const st=getCompanyTrial(co.id);
+    let trialBadge='<span class="badge b-gray" style="font-size:0.62rem">— sem trial</span>';
+    if(st.trial && st.ok)        trialBadge=`<span class="badge b-ok"  style="font-size:0.62rem">🎁 Ativo · ${st.dias}d restantes</span>`;
+    else if(st.trial && !st.ok)  trialBadge=`<span class="badge b-nok" style="font-size:0.62rem">⏰ Expirou em ${esc(co.trialAte)}</span>`;
     return`<tr>
       <td><b>${esc(co.nome)}</b></td><td>${esc(admin.nome||'—')}</td>
       <td><span class="badge ${planoC[co.plano]||'b-gray'}">${esc(co.plano)}</span></td>
       <td>${users.length}</td><td>${(DB.getC(co.id,'ambs')||[]).length}</td>
       <td>${(DB.getC(co.id,'checklists')||[]).length}</td>
       <td style="font-size:0.75rem">${esc(co.criado||'—')}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <input type="date" class="fi" value="${esc(co.trialAte||'')}" onchange="setCompanyTrial('${esc(co.id)}',this.value)" style="padding:4px 6px;font-size:0.74rem;width:140px" title="Definir data limite do trial">
+          ${co.trialAte?`<button class="btn ghost sm" onclick="setCompanyTrial('${esc(co.id)}','')" title="Remover trial">✕</button>`:''}
+        </div>
+        <div style="margin-top:4px">${trialBadge}</div>
+      </td>
     </tr>`;
   }).join('');
+}
+
+function setCompanyTrial(coId, dataISO){
+  const cos=getAllCos(), i=cos.findIndex(c=>c.id===coId);
+  if(i<0){showToast('❌ Empresa não encontrada');return}
+  if(dataISO){
+    cos[i].trialAte = dataISO;
+    showToast(`✅ Trial liberado até ${dataISO} para ${cos[i].nome}`);
+  } else {
+    delete cos[i].trialAte;
+    showToast(`🗑️ Trial removido de ${cos[i].nome}`);
+  }
+  setAllCos(cos);
+  renderSuperAdmin();
 }
 
 // ═══════ CONFIG ═══════
