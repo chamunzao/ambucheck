@@ -738,8 +738,20 @@ tbody td{padding:8px 13px;color:#CDD5E0;vertical-align:middle}
 <div class="toast" id="toast"><span id="toast-msg">✅ Salvo!</span></div>
 
 <script>
+// ═══════ SEGURANÇA ═══════
+function esc(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+
+// Anti-spam: impede submissões repetidas
+const _submitLocks={};
+function lockSubmit(key,ms){if(_submitLocks[key])return false;_submitLocks[key]=true;setTimeout(()=>{_submitLocks[key]=false},ms||2500);return true}
+
+// Validação de URL (whitelist Google Apps Script)
+function isValidGASUrl(url){try{const u=new URL(url);return u.protocol==='https:'&&u.hostname==='script.google.com'}catch{return false}}
+
 // ═══════ CONSTANTES ═══════
-const SUPER = {id:'superadmin',nome:'Super Admin',email:'admin@ambulcheck.com.br',senha:'superadmin123',role:'superadmin',empresa:'AmbuCheck'};
+const SUPER_EMAIL='admin@ambulcheck.com.br';
+const SUPER_HASH='e34f92a20532a873cb3184398070b4b82a8fa29cf48572c203dc5f0fa6158231';
+const SUPER_OBJ = {id:'superadmin',nome:'Super Admin',email:SUPER_EMAIL,role:'superadmin',empresa:'AmbuCheck'};
 const ROLE_PILL  = {superadmin:'rp-super',Administrador:'rp-admin',RT:'rp-rt',Condutor:'rp-func',Técnico:'rp-func'};
 const ROLE_LABEL = {superadmin:'Super Admin',Administrador:'Admin',RT:'Responsável Técnico',Condutor:'Condutor',Técnico:'Técnico'};
 const DEFAULT_STOCK = [
@@ -1111,13 +1123,12 @@ const BAD  = new Set(['BAIXO','AUSENTE','NAO','NAO_LIMPA','RESERVA','1/4','1/3',
 //  DB — Firebase + localStorage fallback
 // ═══════════════════════════════════════════
 const DB = {
-  // localStorage como cache local rápido
-  get(k){try{return JSON.parse(localStorage.getItem('ac_'+k))||null}catch{return null}},
-  set(k,v){localStorage.setItem('ac_'+k,JSON.stringify(v))},
-  getC(cid,k){return this.get('co_'+cid+'_'+k)},
+  get(k){try{const raw=localStorage.getItem('ac_'+k);if(raw===null)return null;return JSON.parse(raw)}catch(e){console.warn('DB.get parse error for',k,e);return null}},
+  set(k,v){try{localStorage.setItem('ac_'+k,JSON.stringify(v))}catch(e){console.warn('DB.set storage error:',e.message);if(e.name==='QuotaExceededError')showToast('⚠️ Armazenamento local cheio.')}},
+  getC(cid,k){if(!cid||!k)return null;return this.get('co_'+cid+'_'+k)},
   setC(cid,k,v){
+    if(!cid||!k)return;
     this.set('co_'+cid+'_'+k,v);
-    // Sync com Firestore em background
     if(window._fbReady && cid && k){
       const {doc,setDoc} = window._fbFns;
       setDoc(doc(window._fbDb,'companies',String(cid),String(k),'data'),
@@ -1177,8 +1188,9 @@ function authTab(tab,el){
   qid('af-'+tab).classList.add('active');
 }
 
+async function hashSenha(s){const enc=new TextEncoder().encode(s);const buf=await crypto.subtle.digest('SHA-256',enc);return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('')}
+
 function findUser(email,senha){
-  if(email===SUPER.email&&senha===SUPER.senha) return SUPER;
   for(const co of getAllCos()){
     const u=(DB.getC(co.id,'users')||[]).find(u=>u.email===email&&u.senha===senha);
     if(u) return{...u,companyId:co.id,empresa:co.nome,companyPlano:co.plano};
@@ -1189,9 +1201,13 @@ function findUser(email,senha){
 async function doLogin(){
   const email=qid('l-email').value.trim(),senha=qid('l-senha').value;
   const err=qid('login-err'); err.classList.remove('show');
-  if(!email||!senha){err.classList.add('show');return;}
-  // Super admin local
-  if(email===SUPER.email&&senha===SUPER.senha){loginOk(SUPER);return;}
+  if(!email||!senha){err.textContent='Preencha e-mail e senha.';err.classList.add('show');return;}
+  if(!lockSubmit('login',3000)){return;}
+  // Super admin — comparação por hash, sem senha em texto no código
+  if(email===SUPER_EMAIL){
+    const h=await hashSenha(senha);
+    if(h===SUPER_HASH){loginOk(SUPER_OBJ);return;}
+  }
   // Tentar Firebase Auth
   if(window._fbReady){
     try{
@@ -1207,11 +1223,16 @@ async function doLogin(){
           return;
         }
       }
-    } catch(e){ if(!e.code||!e.code.includes('user-not-found'))console.warn('FB login:',e.code); }
+    } catch(e){
+      const code=e.code||'';
+      if(code.includes('wrong-password')||code.includes('invalid-credential')){err.textContent='Senha incorreta.';err.classList.add('show');return;}
+      if(code.includes('too-many-requests')){err.textContent='Muitas tentativas. Aguarde alguns minutos.';err.classList.add('show');return;}
+      if(!code.includes('user-not-found'))console.warn('FB login:',code);
+    }
   }
   // Fallback localStorage
   const u=findUser(email,senha);
-  if(!u){err.classList.add('show');return;}
+  if(!u){err.textContent='E-mail ou senha incorretos.';err.classList.add('show');return;}
   loginOk(u);
 }
 
@@ -1238,11 +1259,14 @@ function demoLogin(){
 }
 
 function doRegister(){
+  if(!lockSubmit('register',3000)){return}
   const nome=qid('r-nome').value.trim(),email=qid('r-email').value.trim();
   const empresa=qid('r-empresa').value.trim(),senha=qid('r-senha').value,plano=qid('r-plano').value;
   const err=qid('reg-err'); err.classList.remove('show');
   if(!nome||!email||!empresa||!senha){err.textContent='Preencha todos os campos.';err.classList.add('show');return}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){err.textContent='E-mail inválido.';err.classList.add('show');return}
   if(senha.length<6){err.textContent='Senha mínima 6 caracteres.';err.classList.add('show');return}
+  if(nome.length>80||empresa.length>100){err.textContent='Nome ou empresa muito longos.';err.classList.add('show');return}
   const allUsers=getAllCos().flatMap(co=>DB.getC(co.id,'users')||[]);
   if(allUsers.find(u=>u.email===email)){err.textContent='E-mail já cadastrado.';err.classList.add('show');return}
   const coId='co_'+uid();
@@ -1264,7 +1288,10 @@ function doRegister(){
 }
 
 function loginOk(user){
-  CU=user; DB.set('session',user);
+  CU=user;
+  // Nunca armazenar senha na sessão
+  const safeSession={id:user.id,email:user.email,nome:user.nome,role:user.role,companyId:user.companyId,empresa:user.empresa,companyPlano:user.companyPlano};
+  DB.set('session',safeSession);
   // Salvar user no Firestore
   if(window._fbReady && user && user.id){
     const {doc,setDoc} = window._fbFns;
@@ -1365,8 +1392,8 @@ function buildAmbRadios(){
     el.innerHTML=ambs.length
       ? ambs.map(a=>{
           const ti=TIPOS[a.tipo]||{icon:'🚑'};
-          const fn=name==='ambulancia'?`onchange="onAmbSelect('${a.id}')"`:''
-          return`<label class="rb"><input type="radio" name="${name}" value="${a.id}" ${fn} onchange="upd()"><span>${ti.icon} ${a.prefixo} (${a.placa})</span></label>`;
+          const fn=name==='ambulancia'?`onchange="onAmbSelect('${esc(a.id)}')"`:''
+          return`<label class="rb"><input type="radio" name="${name}" value="${esc(a.id)}" ${fn} onchange="upd()"><span>${ti.icon} ${esc(a.prefixo)} (${esc(a.placa)})</span></label>`;
         }).join('')
       : '<span style="color:var(--muted);font-size:0.83rem">Nenhuma ambulância cadastrada.</span>';
   });
@@ -1380,7 +1407,7 @@ function onAmbSelect(ambId){
   const ti=TIPOS[amb.tipo]||{icon:'🚑',label:amb.tipo};
   const eqStr=amb.equipe.map(e=>{
     const u=users.find(x=>x.id===e.userId);
-    return`<span style="display:inline-flex;align-items:center;gap:4px;margin:2px 4px 2px 0;padding:2px 8px;background:var(--dark4);border:1px solid var(--border);border-radius:4px;font-size:0.75rem">${u?'👤 '+u.nome:e.cargo}</span>`;
+    return`<span style="display:inline-flex;align-items:center;gap:4px;margin:2px 4px 2px 0;padding:2px 8px;background:var(--dark4);border:1px solid var(--border);border-radius:4px;font-size:0.75rem">${u?'👤 '+esc(u.nome):esc(e.cargo)}</span>`;
   }).join('');
   if(info){info.innerHTML=`<b style="color:var(--text)">${ti.icon} ${amb.prefixo} — Equipe Fixa:</b><br>${eqStr}`;info.style.display='block';}
 }
@@ -1394,18 +1421,18 @@ function renderAmbs(){
     const ti=TIPOS[a.tipo]||{icon:'🚑',cor:'#888'};
     const eqStr=(a.equipe||[]).map(e=>{
       const u=users.find(x=>x.id===e.userId);
-      return u?`${e.cargo}: <b>${u.nome.split(' ')[0]}</b>`:e.cargo;
+      return u?`${esc(e.cargo)}: <b>${esc(u.nome.split(' ')[0])}</b>`:esc(e.cargo);
     }).join('<br>')||'<span style="color:var(--muted2)">—</span>';
     return `<tr>
-      <td><b>${a.prefixo}</b><br><span style="font-size:0.72rem;color:var(--muted)">${a.placa}</span></td>
+      <td><b>${esc(a.prefixo)}</b><br><span style="font-size:0.72rem;color:var(--muted)">${esc(a.placa)}</span></td>
       <td>${tipoPill(a.tipo)}</td>
-      <td style="font-size:0.78rem">${a.modelo||'—'}${a.ano?` (${a.ano})`:''}</td>
+      <td style="font-size:0.78rem">${esc(a.modelo)||'—'}${a.ano?` (${esc(a.ano)})`:''}</td>
       <td style="font-size:0.76rem;line-height:1.6">${eqStr}</td>
-      <td>${rt?`<span class="badge b-ye">${rt.nome.split(' ')[0]}</span>`:'<span class="badge b-gray">Empresa</span>'}</td>
-      <td><span class="badge ${a.status==='Ativo'?'b-ok':'b-nok'}">${a.status}</span></td>
+      <td>${rt?`<span class="badge b-ye">${esc(rt.nome.split(' ')[0])}</span>`:'<span class="badge b-gray">Empresa</span>'}</td>
+      <td><span class="badge ${a.status==='Ativo'?'b-ok':'b-nok'}">${esc(a.status)}</span></td>
       <td style="white-space:nowrap">
-        <button class="btn ghost sm" onclick="openSetRT('${a.id}')" style="margin-bottom:3px">RT</button>
-        <button class="btn ghost sm" onclick="openEditEquipe('${a.id}')">Equipe</button>
+        <button class="btn ghost sm" onclick="openSetRT('${esc(a.id)}')" style="margin-bottom:3px">RT</button>
+        <button class="btn ghost sm" onclick="openEditEquipe('${esc(a.id)}')">Equipe</button>
       </td>
     </tr>`;
   }).join('');
@@ -1531,8 +1558,8 @@ function renderExtraItems(){
   if(!extras.length){body.innerHTML='<span style="color:var(--muted);font-size:0.83rem">Nenhum item adicional aprovado ainda.</span>';return}
   body.innerHTML=extras.map(e=>`
     <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-      <span class="badge b-ok">${e.categoria}</span>
-      <span style="font-size:0.85rem;font-weight:600">${e.nome}</span>
+      <span class="badge b-ok">${esc(e.categoria)}</span>
+      <span style="font-size:0.85rem;font-weight:600">${esc(e.nome)}</span>
       <div class="rg" style="margin-left:auto">
         <label class="rb"><input type="radio" name="ex_${e.id}" value="OK" onchange="upd()"><span>✔ OK</span></label>
         <label class="rb"><input type="radio" name="ex_${e.id}" value="NOK" onchange="upd()"><span>✘ N/OK</span></label>
@@ -1556,13 +1583,19 @@ function upd(){
 }
 
 function submitChecklist(){
+  if(!lockSubmit('checklist',3000)){showToast('⏳ Aguarde...');return}
   const missing=[];
   if(!qid('hodometro').value) missing.push('Hodômetro');
-  if(!qid('condutor').value) missing.push('Condutor');
+  if(!qid('condutor').value.trim()) missing.push('Condutor');
   if(!qs('input[name="ambulancia"]:checked')) missing.push('Ambulância');
   if(!qs('input[name="turno"]:checked')) missing.push('Turno');
   if(!qs('input[name="combustivel"]:checked')) missing.push('Combustível');
   if(missing.length){showToast('❌ Obrigatórios: '+missing.join(', '));return}
+  // Validação de dados numéricos
+  const km=parseInt(qid('hodometro').value);
+  if(isNaN(km)||km<0||km>9999999){showToast('❌ KM inválido (0 a 9.999.999).');return}
+  const kmFim=qid('km_fim').value?parseInt(qid('km_fim').value):null;
+  if(kmFim!==null&&(isNaN(kmFim)||kmFim<km)){showToast('❌ KM Fim deve ser maior que KM Início.');return}
   const ambId=gR('ambulancia');
   const amb=getAmb(ambId)||{prefixo:ambId,placa:'—'};
   const rec={
@@ -1592,8 +1625,11 @@ function submitChecklist(){
 
 // ═══════ SUGESTÕES ═══════
 function submitSugestao(){
+  if(!lockSubmit('sugestao',3000)){showToast('⏳ Aguarde...');return}
   const nome=qid('sug-nome').value.trim(), cat=qid('sug-cat').value, just=qid('sug-just').value.trim(), tipo=gR('sug_tipo');
   if(!nome||!cat||!just){showToast('❌ Preencha nome, categoria e justificativa.');return}
+  if(nome.length>100){showToast('❌ Nome muito longo (máx 100 caracteres).');return}
+  if(just.length>500){showToast('❌ Justificativa muito longa (máx 500 caracteres).');return}
   const sug={id:'SUG-'+uid(),nome,categoria:cat,tipo:tipo||'estoque',justificativa:just,solicitante:CU.nome,solicitanteId:CU.id,status:'pendente',dtSolicitacao:nowStr(),obsRT:''};
   const sugs=getSugs(); sugs.unshift(sug); setSugs(sugs);
   qid('sug-nome').value=''; qid('sug-cat').value=''; qid('sug-just').value='';
@@ -1607,10 +1643,10 @@ function renderSugs(){
   if(!sugs.length){tbody.innerHTML='<tr><td colspan="6" class="empty">Você ainda não enviou sugestões.</td></tr>';return}
   const sc={pendente:'b-ye',aprovado:'b-ok',rejeitado:'b-nok'};
   tbody.innerHTML=sugs.map(s=>`<tr>
-    <td><b>${s.nome}</b></td><td>${s.categoria}</td><td><span class="badge b-info">${s.tipo}</span></td>
-    <td style="font-size:0.75rem">${s.dtSolicitacao}</td>
-    <td><span class="badge ${sc[s.status]}">${s.status}</span></td>
-    <td style="font-size:0.78rem;color:var(--muted)">${s.obsRT||'—'}</td>
+    <td><b>${esc(s.nome)}</b></td><td>${esc(s.categoria)}</td><td><span class="badge b-info">${esc(s.tipo)}</span></td>
+    <td style="font-size:0.75rem">${esc(s.dtSolicitacao)}</td>
+    <td><span class="badge ${sc[s.status]||'b-gray'}">${esc(s.status)}</span></td>
+    <td style="font-size:0.78rem;color:var(--muted)">${esc(s.obsRT)||'—'}</td>
   </tr>`).join('');
 }
 
@@ -1624,23 +1660,23 @@ function renderAprovacoes(){
     pel.innerHTML=pending.map(s=>`
       <div class="aprv-card">
         <div class="aprv-meta">
-          <span class="aprv-name">${s.nome}</span>
-          <span class="badge b-ye">${s.categoria}</span>
-          <span class="badge b-info">${s.tipo}</span>
-          <span style="font-size:0.73rem;color:var(--muted);margin-left:auto">por ${s.solicitante} · ${s.dtSolicitacao}</span>
+          <span class="aprv-name">${esc(s.nome)}</span>
+          <span class="badge b-ye">${esc(s.categoria)}</span>
+          <span class="badge b-info">${esc(s.tipo)}</span>
+          <span style="font-size:0.73rem;color:var(--muted);margin-left:auto">por ${esc(s.solicitante)} · ${esc(s.dtSolicitacao)}</span>
         </div>
-        <div class="aprv-desc">📝 ${s.justificativa}</div>
-        <div style="display:flex;gap:8px"><button class="btn sm" style="background:#92400E;color:var(--yellow)" onclick="abrirAprv('${s.id}')">Revisar →</button></div>
+        <div class="aprv-desc">📝 ${esc(s.justificativa)}</div>
+        <div style="display:flex;gap:8px"><button class="btn sm" style="background:#92400E;color:var(--yellow)" onclick="abrirAprv('${esc(s.id)}')">Revisar →</button></div>
       </div>`).join('');
   }
   const hel=qid('aprv-hist-tb');
   if(!hist.length){hel.innerHTML='<tr><td colspan="5" class="empty">Sem histórico.</td></tr>';return}
   const sc={aprovado:'b-ok',rejeitado:'b-nok'};
   hel.innerHTML=hist.map(s=>`<tr>
-    <td><b>${s.nome}</b></td><td>${s.solicitante}</td>
-    <td><span class="badge ${sc[s.status]}">${s.status}</span></td>
-    <td style="font-size:0.75rem">${s.dtDecisao||'—'}</td>
-    <td style="font-size:0.78rem">${s.obsRT||'—'}</td>
+    <td><b>${esc(s.nome)}</b></td><td>${esc(s.solicitante)}</td>
+    <td><span class="badge ${sc[s.status]||'b-gray'}">${esc(s.status)}</span></td>
+    <td style="font-size:0.75rem">${esc(s.dtDecisao)||'—'}</td>
+    <td style="font-size:0.78rem">${esc(s.obsRT)||'—'}</td>
   </tr>`).join('');
 }
 
@@ -1650,11 +1686,11 @@ function abrirAprv(id){
   qid('aprv-title').textContent='Revisar: '+sug.nome;
   qid('aprv-body').innerHTML=`
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
-      <span class="badge b-ye">${sug.categoria}</span>
-      <span class="badge b-info">${sug.tipo}</span>
+      <span class="badge b-ye">${esc(sug.categoria)}</span>
+      <span class="badge b-info">${esc(sug.tipo)}</span>
     </div>
-    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:10px">Solicitado por <b style="color:var(--text)">${sug.solicitante}</b> em ${sug.dtSolicitacao}</div>
-    <div style="background:#0A0C12;border:1px solid var(--border);border-radius:7px;padding:10px 13px;font-size:0.83rem;color:#CDD5E0;line-height:1.5"><b>Justificativa:</b> ${sug.justificativa}</div>`;
+    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:10px">Solicitado por <b style="color:var(--text)">${esc(sug.solicitante)}</b> em ${esc(sug.dtSolicitacao)}</div>
+    <div style="background:#0A0C12;border:1px solid var(--border);border-radius:7px;padding:10px 13px;font-size:0.83rem;color:#CDD5E0;line-height:1.5"><b>Justificativa:</b> ${esc(sug.justificativa)}</div>`;
   qid('aprv-obs').value='';
   openModal('modal-aprv');
 }
@@ -1684,9 +1720,11 @@ function decidir(aprovar){
 
 // ═══════ ALTERAÇÕES ═══════
 function submitAlt(){
+  if(!lockSubmit('alteracao',3000)){showToast('⏳ Aguarde...');return}
   const amb=qs('input[name="alt_amb"]:checked'), tipo=qs('input[name="alt_tipo"]:checked');
   const desc=qid('alt-desc').value.trim(), resp=qid('alt-resp').value.trim();
   if(!amb||!tipo||!desc||!resp){showToast('❌ Preencha: Ambulância, Tipo, Descrição e Responsável.');return}
+  if(desc.length>1000){showToast('❌ Descrição muito longa (máx 1000 caracteres).');return}
   const ambObj=getAmb(amb.value)||{prefixo:amb.value,placa:'—'};
   const rec={id:'ALT-'+uid(),dt:nowStr(),data:qid('alt-data').value,amb:`${ambObj.prefixo} (${ambObj.placa})`,tipo:tipo.value,grav:gR('alt_grav'),desc,resp,status:gR('alt_status')||'Pendente',custo:qid('alt-custo').value||'0',usuario:CU.nome};
   const alts=getAlts(); alts.unshift(rec); setAlts(alts);
@@ -1702,10 +1740,10 @@ function renderAlts(){
   const gc={Leve:'b-ok',Moderada:'b-ye',Grave:'b-nok'};
   const sc={'Pendente':'b-nok','Em Andamento':'b-ye','Resolvido':'b-ok'};
   tbody.innerHTML=alts.map(r=>`<tr>
-    <td>${r.data||'—'}</td><td><span class="badge b-info">${r.amb}</span></td><td>${r.tipo}</td>
-    <td><span class="badge ${gc[r.grav]||'b-gray'}">${r.grav||'—'}</span></td>
-    <td style="max-width:180px">${r.desc}</td><td>${r.resp}</td>
-    <td><span class="badge ${sc[r.status]||'b-gray'}">${r.status}</span></td>
+    <td>${esc(r.data)||'—'}</td><td><span class="badge b-info">${esc(r.amb)}</span></td><td>${esc(r.tipo)}</td>
+    <td><span class="badge ${gc[r.grav]||'b-gray'}">${esc(r.grav)||'—'}</span></td>
+    <td style="max-width:180px">${esc(r.desc)}</td><td>${esc(r.resp)}</td>
+    <td><span class="badge ${sc[r.status]||'b-gray'}">${esc(r.status)}</span></td>
     <td>${r.custo&&r.custo!='0'?'R$ '+parseFloat(r.custo).toFixed(2):'—'}</td>
   </tr>`).join('');
 }
@@ -1743,8 +1781,10 @@ function renderStock(){
 function chgQty(id,d){const s=getStock(),i=s.find(x=>x.id===id);if(!i)return;i.qty=Math.max(0,i.qty+d);setStock(s);renderStock()}
 
 function submitUso(){
+  if(!lockSubmit('uso',3000)){showToast('⏳ Aguarde...');return}
   const item=qid('uso-item').value.trim(), qtd=parseInt(qid('uso-qtd').value)||0;
   if(!item||qtd<1){showToast('❌ Informe item e quantidade.');return}
+  if(qtd>9999){showToast('❌ Quantidade inválida.');return}
   const stock=getStock(), si=stock.find(i=>i.name===item);
   if(si){if(si.qty<qtd&&!confirm(`Estoque insuficiente (${si.qty}). Continuar?`))return;si.qty=Math.max(0,si.qty-qtd);setStock(stock)}
   const amb=qs('input[name="uso_amb"]:checked');
@@ -1761,18 +1801,23 @@ function renderUso(){
   const usos=getUsos();
   if(!usos.length){tbody.innerHTML='<tr><td colspan="6" class="empty">Nenhum uso registrado.</td></tr>';return}
   tbody.innerHTML=usos.map(r=>`<tr>
-    <td style="font-size:0.78rem">${r.dt}</td><td><span class="badge b-pu">${r.amb}</span></td>
-    <td><b>${r.item}</b></td><td><span class="badge b-info">${r.qtd}</span></td>
-    <td>${r.pac||'—'}</td><td>${r.resp||'—'}</td>
+    <td style="font-size:0.78rem">${esc(r.dt)}</td><td><span class="badge b-pu">${esc(r.amb)}</span></td>
+    <td><b>${esc(r.item)}</b></td><td><span class="badge b-info">${esc(r.qtd)}</span></td>
+    <td>${esc(r.pac)||'—'}</td><td>${esc(r.resp)||'—'}</td>
   </tr>`).join('');
 }
 
 // ═══════ USUÁRIOS ═══════
 function addUser(){
+  if(!lockSubmit('adduser',3000)){return}
   const nome=qid('nu-nome').value.trim(), email=qid('nu-email').value.trim();
   const senha=qid('nu-senha').value, role=qid('nu-func').value;
   if(!nome||!email||!senha){showToast('❌ Preencha nome, e-mail e senha.');return}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showToast('❌ E-mail inválido.');return}
   if(senha.length<6){showToast('❌ Senha mínima 6 caracteres.');return}
+  if(nome.length>80){showToast('❌ Nome muito longo.');return}
+  const validRoles=['Administrador','RT','Condutor','Técnico'];
+  if(!validRoles.includes(role)){showToast('❌ Função inválida.');return}
   const users=getUsers();
   if(users.find(u=>u.email===email)){showToast('❌ E-mail já cadastrado.');return}
   users.push({id:'u_'+uid(),nome,email,senha,role,companyId:cid(),criado:nowStr()});
@@ -1786,10 +1831,10 @@ function renderUsers(){
   if(!users.length){tbody.innerHTML='<tr><td colspan="5" class="empty">Nenhum usuário.</td></tr>';return}
   const rc={Administrador:'rp-admin',RT:'rp-rt',Condutor:'rp-func',Técnico:'rp-func'};
   tbody.innerHTML=users.map(u=>`<tr>
-    <td><b>${u.nome}</b></td><td>${u.email}</td>
-    <td><span class="rp ${rc[u.role]||'rp-func'}">${ROLE_LABEL[u.role]||u.role}</span></td>
-    <td style="font-size:0.75rem">${u.criado||'—'}</td>
-    <td><button class="btn danger sm" onclick="removeUser('${u.id}')">Remover</button></td>
+    <td><b>${esc(u.nome)}</b></td><td>${esc(u.email)}</td>
+    <td><span class="rp ${rc[u.role]||'rp-func'}">${esc(ROLE_LABEL[u.role]||u.role)}</span></td>
+    <td style="font-size:0.75rem">${esc(u.criado)||'—'}</td>
+    <td><button class="btn danger sm" onclick="removeUser('${esc(u.id)}')">Remover</button></td>
   </tr>`).join('');
 }
 
@@ -1815,7 +1860,7 @@ function renderDashboard(){
   if(!chks.length){tbody.innerHTML='<tr><td colspan="5" class="empty">Nenhum checklist ainda.</td></tr>'}
   else{tbody.innerHTML=chks.slice(0,5).map(c=>{
     const hasNok=[c.m_agua,c.m_oleo,c.m_freios,c.m_hidraulica,c.m_motor_geral,c.m_ac_cabine,c.m_ac_salao,c.ac_extintor_g,c.ac_extintor_m,...EL_ITEMS.map(([n])=>c[n])].some(v=>BAD.has(v));
-    return`<tr><td style="font-size:0.78rem">${c.dt}</td><td><span class="badge b-info">${c.amb}</span></td><td>${c.condutor}</td><td>${c.turno}</td><td><span class="badge ${hasNok?'b-nok':'b-ok'}">${hasNok?'⚠ Problemas':'✔ OK'}</span></td></tr>`;
+    return`<tr><td style="font-size:0.78rem">${esc(c.dt)}</td><td><span class="badge b-info">${esc(c.amb)}</span></td><td>${esc(c.condutor)}</td><td>${esc(c.turno)}</td><td><span class="badge ${hasNok?'b-nok':'b-ok'}">${hasNok?'⚠ Problemas':'✔ OK'}</span></td></tr>`;
   }).join('')}
   // Escala de hoje
   const hojeDiv=qid('dash-hoje');
@@ -1823,7 +1868,7 @@ function renderDashboard(){
   const ac=qid('dash-alerts');
   const lowItems=getStock().filter(i=>i.qty<=i.min);
   if(!lowItems.length){if(ac)ac.innerHTML='';return}
-  if(ac)ac.innerHTML=`<div class="card"><div class="ch"><div class="ch-icon" style="background:#92400E">⚠️</div><div class="ch-title">Alertas de Estoque</div></div><div class="cb">${lowItems.map(i=>`<div class="alert red">⚠️ <b>${i.name}</b>: ${i.qty} ${i.unit} (mín: ${i.min})</div>`).join('')}</div></div>`;
+  if(ac)ac.innerHTML=`<div class="card"><div class="ch"><div class="ch-icon" style="background:#92400E">⚠️</div><div class="ch-title">Alertas de Estoque</div></div><div class="cb">${lowItems.map(i=>`<div class="alert red">⚠️ <b>${esc(i.name)}</b>: ${esc(i.qty)} ${esc(i.unit)} (mín: ${esc(i.min)})</div>`).join('')}</div></div>`;
 }
 
 // ═══════ SUPER ADMIN ═══════
@@ -1843,11 +1888,11 @@ function renderSuperAdmin(){
     const users=DB.getC(co.id,'users')||[];
     const admin=users.find(u=>u.role==='Administrador')||users[0]||{};
     return`<tr>
-      <td><b>${co.nome}</b></td><td>${admin.nome||'—'}</td>
-      <td><span class="badge ${planoC[co.plano]||'b-gray'}">${co.plano}</span></td>
+      <td><b>${esc(co.nome)}</b></td><td>${esc(admin.nome)||'—'}</td>
+      <td><span class="badge ${planoC[co.plano]||'b-gray'}">${esc(co.plano)}</span></td>
       <td>${users.length}</td><td>${(DB.getC(co.id,'ambs')||[]).length}</td>
       <td>${(DB.getC(co.id,'checklists')||[]).length}</td>
-      <td style="font-size:0.75rem">${co.criado||'—'}</td>
+      <td style="font-size:0.75rem">${esc(co.criado)||'—'}</td>
     </tr>`;
   }).join('');
 }
@@ -1879,14 +1924,17 @@ function salvarConfig(){
 }
 
 function salvarGAS(){
-  const cfg=getCfg(); cfg.gas_url=qid('cfg-gas').value.trim(); setCfg(cfg);
+  const url=qid('cfg-gas').value.trim();
+  if(url&&!isValidGASUrl(url)){showToast('❌ URL inválida. Use uma URL do Google Apps Script (https://script.google.com/...)');return}
+  const cfg=getCfg(); cfg.gas_url=url; setCfg(cfg);
   showToast('✅ URL do Drive salva!');
 }
 
 // ═══════ DRIVE ═══════
 async function sendToDrive(payload){
   const cfg=getCfg(); if(!cfg.gas_url) return;
-  try{await fetch(cfg.gas_url,{method:'POST',body:JSON.stringify(payload),headers:{'Content-Type':'application/json'}})}catch(e){}
+  if(!isValidGASUrl(cfg.gas_url)){console.warn('URL do Drive inválida — ignorando envio.');return}
+  try{await fetch(cfg.gas_url,{method:'POST',body:JSON.stringify(payload),headers:{'Content-Type':'application/json'}})}catch(e){console.warn('Erro ao enviar para Drive:',e.message)}
 }
 
 // ═══════ INIT ═══════
@@ -1902,7 +1950,7 @@ function initDateTime(){
 (function(){
   const session=DB.get('session');
   if(!session||!session.email) return;
-  if(session.role==='superadmin'){loginOk(SUPER);return}
+  if(session.role==='superadmin'){loginOk(SUPER_OBJ);return}
   for(const co of getAllCos()){
     const u=(DB.getC(co.id,'users')||[]).find(x=>x.id===session.id&&x.email===session.email);
     if(u){loginOk({...u,companyId:co.id,empresa:co.nome,companyPlano:co.plano});return}
@@ -2025,7 +2073,7 @@ function renderEscalaCalendar(){
         dayEsc.forEach(e=>{
           const names=(e.equipe||[]).map(f=>{
             const u=users.find(x=>x.id===f.userId);
-            return`<div class="esc-block-func">${u?u.nome.split(' ')[0]:f.cargo}</div>`;
+            return`<div class="esc-block-func">${u?esc(u.nome.split(' ')[0]):esc(f.cargo)}</div>`;
           }).join('');
           html+=`<div class="esc-block" onclick="removeEscala('${e.id}')">
             <div class="esc-block-turno">${e.turno.split('(')[0].trim()}</div>
@@ -2054,7 +2102,7 @@ function renderEscalaTabela(){
     const ti=TIPOS[amb.tipo]||{icon:'🚑',cor:'#888'};
     const eq=(e.equipe||[]).map(f=>{
       const u=users.find(x=>x.id===f.userId);
-      return `${f.cargo}${u?' – '+u.nome.split(' ')[0]:''}`;
+      return `${esc(f.cargo)}${u?' – '+esc(u.nome.split(' ')[0]):''}`;
     }).join(' | ')||'—';
     const per=e.inicio===e.fim||!e.fim?fmtDateBR(e.inicio):`${fmtDateBR(e.inicio)} → ${fmtDateBR(e.fim)}`;
     return`<tr>
@@ -2165,8 +2213,8 @@ function renderKmSaidas(){
   list.innerHTML = window._kmSaidas.map((s,i)=>`
     <div style="display:flex;align-items:center;gap:8px;background:var(--dark3);border:1px solid var(--border);border-radius:7px;padding:8px 12px">
       <span style="font-size:0.85rem;font-weight:700;color:var(--text)">🚑 ${Number(s.km).toLocaleString('pt-BR')} km</span>
-      <span class="badge b-info">${s.hora}</span>
-      ${s.obs?`<span style="font-size:0.78rem;color:var(--muted)">${s.obs}</span>`:''}
+      <span class="badge b-info">${esc(s.hora)}</span>
+      ${s.obs?`<span style="font-size:0.78rem;color:var(--muted)">${esc(s.obs)}</span>`:''}
       <button class="btn danger sm" onclick="removeKmSaida(${i})" style="margin-left:auto;padding:3px 8px">✕</button>
     </div>`).join('');
 }
@@ -2200,18 +2248,7 @@ function saveKmHist(rec){
   });
 }
 
-// ═══════════════════════════════════════════
-//  AUTO LOGIN (session)
-// ═══════════════════════════════════════════
-(function(){
-  const session=DB.get('session');
-  if(!session||!session.email) return;
-  if(session.role==='superadmin'){loginOk(SUPER);return;}
-  for(const co of getAllCos()){
-    const u=(DB.getC(co.id,'users')||[]).find(x=>x.id===session.id&&x.email===session.email);
-    if(u){loginOk({...u,companyId:co.id,empresa:co.nome,companyPlano:co.plano});return;}
-  }
-})();
+// Auto-login duplicado removido — já existe em bloco anterior
 </script>
 </body>
 </html>
