@@ -1569,9 +1569,12 @@ async function doLogin(){
       }
     } catch(e){
       const code=e.code||'';
-      if(code.includes('wrong-password')||code.includes('invalid-credential')){err.textContent='Senha incorreta.';err.classList.add('show');return;}
+      // Bloqueio só para rate-limit. Outros erros (invalid-credential, user-not-found,
+      // wrong-password) caem no fallback localStorage — necessário para contas demo
+      // e qualquer usuário que ainda não foi sincronizado com o Firebase Auth.
       if(code.includes('too-many-requests')){err.textContent='Muitas tentativas. Aguarde alguns minutos.';err.classList.add('show');return;}
-      if(!code.includes('user-not-found'))console.warn('FB login:',code);
+      if(!code.includes('user-not-found')&&!code.includes('invalid-credential')&&!code.includes('wrong-password'))
+        console.warn('FB login:',code);
     }
   }
   // Fallback localStorage
