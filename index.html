@@ -1724,10 +1724,11 @@ function buildNav(){
     addNav('🔄','Passagem de Plantão','plantao');
   }
   if(role==='RT'||role==='Administrador'){addSep('Aprovações');addNav('⏳','Aprovar Sugestões','aprovacoes',pendingSugs,'ye')}
-  if(role==='Condutor'||role==='Técnico'){addSep('Sugestões');addNav('💡','Sugerir Item','sugerir')}
+  if(role==='Técnico'||role==='Enfermeiro'){addSep('Sugestões');addNav('💡','Sugerir Item','sugerir')}
   addSep('Registros');
   addNav('🔧','Alterações','alteracoes');
-  addNav('💊','Estoque & Uso','estoque');
+  // Condutor não acessa medicações/estoque — só checklist mecânico
+  if(role!=='Condutor') addNav('💊','Estoque & Uso','estoque');
   if(role==='Administrador'||role==='RT'){
     addSep('Gestão');
     addNav('👥','Usuários','usuarios');
@@ -3345,6 +3346,13 @@ function buildBottomNav(){
       {icon:'✓',label:'Checklist',page:'checklist'},
       {icon:'📦',label:'Estoque',page:'estoque'},
       {icon:'👥',label:'Equipe',page:'usuarios'},
+    ];
+  } else if(CU.role==='Condutor') {
+    // Condutor só vê o checklist mecânico — sem estoque/medicações
+    items = [
+      {icon:'🏠',label:'Início',page:'dashboard'},
+      {icon:'✓',label:'Checklist',page:'checklist'},
+      {icon:'🔧',label:'Alterações',page:'alteracoes'},
     ];
   } else {
     items = [
