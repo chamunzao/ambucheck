@@ -106,18 +106,25 @@ Sempre checar `window._fbReady` antes de chamar funcoes Firebase.
 
 ### 2.2 Tipografia
 
-```css
-/* Titulos: fonte display bold */
-font-family: 'Syne', sans-serif;
-font-weight: 700 | 800;
+**Regra:** fonte *display* (Syne, Bebas, etc.) deixa o app com cara de produto de consumo/lifestyle. Pra apps **corporativos / B2B / saude / operacionais**, use uma sans neutra (Inter, DM Sans, Manrope) com pesos moderados.
 
-/* Corpo: fonte legivel */
+```css
+/* Titulos — corporate (recomendado pra SaaS, saude, B2B) */
+font-family: 'Inter', 'DM Sans', sans-serif;
+font-weight: 600 | 700;
+letter-spacing: -0.2px;  /* tighten um pouco pra parecer "oficial" */
+
+/* Corpo */
 font-family: 'DM Sans', sans-serif;
 font-weight: 300 | 400 | 500 | 600;
 
 /* Google Fonts import */
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 ```
+
+**Licao AmbuCheck:** comecou com Syne 800 em todos os titulos — usuario descreveu como "feia e pouco profissional". Trocar por Inter 600-700 com letter-spacing justo resolveu a percepcao sem mudar estrutura.
+
+Pra apps de *branding / marketing / criativo*, ai sim fonte display faz sentido.
 
 ### 2.3 Componentes Reutilizaveis
 
@@ -326,15 +333,17 @@ const setUsers = (v) => DB.setC(cid(), 'users', v);
 ```javascript
 const ROLES = {
   superadmin:    { label: 'Super Admin',  pill: 'rp-super',  access: ['*'] },
-  Administrador: { label: 'Admin',        pill: 'rp-admin',  access: ['dashboard','checklist','aprovacoes','alteracoes','estoque','usuarios','ambulancias','config'] },
+  Administrador: { label: 'Admin',        pill: 'rp-admin',  access: ['*'] },
   RT:            { label: 'Responsavel Tecnico', pill: 'rp-rt', access: ['dashboard','checklist','aprovacoes','alteracoes','estoque','usuarios','ambulancias','config'] },
-  Condutor:      { label: 'Condutor',     pill: 'rp-func',   access: ['dashboard','checklist','sugerir','alteracoes','estoque'] },
+  Enfermeiro:    { label: 'Enfermeiro',   pill: 'rp-func',   access: ['dashboard','checklist','plantao','alteracoes','estoque'] },
   Tecnico:       { label: 'Tecnico',      pill: 'rp-func',   access: ['dashboard','checklist','sugerir','alteracoes','estoque'] },
+  Condutor:      { label: 'Condutor',     pill: 'rp-func',   access: ['dashboard','checklist','sugerir','alteracoes','estoque'] },
 };
 ```
 
-**Licao:** No AmbuCheck, o controle de acesso era apenas visual (escondia menu).
-Em novos apps, validar role tambem no backend/Firestore Rules.
+**Licao 1:** controle de acesso visual NAO e seguranca. Sempre validar role tambem no backend/Firestore Rules.
+
+**Licao 2:** papeis que parecem "iguais" (Condutor/Tecnico/Enfermeiro) frequentemente precisam ver **blocos diferentes** do mesmo formulario — nao so paineis diferentes. Ver secao 11.4 (visibilidade de campos por papel).
 
 ### 3.3 Fluxo de Auth
 
@@ -345,15 +354,38 @@ Em novos apps, validar role tambem no backend/Firestore Rules.
 4. Auto-login: checa sessao salva ao carregar
 ```
 
-### 3.4 Planos SaaS
+### 3.4 Planos SaaS + Trial (liberado por Super Admin)
 
 ```javascript
 const PLANS = [
   { id: 'basico',  name: 'Basico',  price: 49,  maxAmbs: 2,        desc: 'ate 2 ambulancias' },
   { id: 'padrao',  name: 'Padrao',  price: 129, maxAmbs: 6,        desc: 'ate 6 ambulancias' },
-  { id: 'premium', name: 'Premium', price: 249, maxAmbs: Infinity,  desc: 'ilimitado' },
+  { id: 'premium', name: 'Premium', price: 249, maxAmbs: Infinity, desc: 'ilimitado' },
 ];
+
+// Trial: super-admin libera acesso de teste com data limite.
+// Campo opcional `trialAte` na empresa (ISO date). Se ausente → plano normal.
+// Se presente e futura → trial ativo. Se passada → bloqueia novos cadastros.
+function getCompanyTrial(coId){
+  const co = getAllCos().find(c => c.id === coId);
+  if(!co)          return {ok:false, reason:'Empresa nao encontrada'};
+  if(!co.trialAte) return {ok:true,  trial:false};
+  const hoje = new Date().toISOString().slice(0,10);
+  const ativo = co.trialAte >= hoje;
+  const dias  = Math.ceil((new Date(co.trialAte) - new Date(hoje)) / 86400000);
+  return ativo
+    ? {ok:true,  trial:true, ate:co.trialAte, dias}
+    : {ok:false, trial:true, ate:co.trialAte, dias, reason:`Trial expirou em ${co.trialAte}.`};
+}
+
+// Uso no ponto de criacao (bloqueio):
+const st = getCompanyTrial(cid());
+if(!st.ok){ showToast('Bloqueado: ' + st.reason); return; }
 ```
+
+**Padrao:** trial **nao bloqueia leitura** — so `create`/`update` de entidades novas. Assim o feedback coletado durante o teste nao some quando expira, e o RT consegue mostrar o que tem pra decidir se vai pagar.
+
+**UX:** banner no topbar indicando "Trial - Xd restantes" (verde) ou "Trial expirou" (vermelho).
 
 ---
 
@@ -803,3 +835,295 @@ function showToast(msg, duration = 3200) {
 function openModal(id)  { document.getElementById(id).classList.add('show') }
 function closeModal(id) { document.getElementById(id).classList.remove('show') }
 ```
+
+---
+
+## 11. PADROES DE MULTI-HIERARQUIA E UX GATING
+
+> Secao extraida do ciclo de features: multi-RT, trial, escala,
+> seletor de ambulancia e visibilidade de campos por papel.
+
+### 11.1 Hierarquia multi-nivel (tenant → sub-owner → recursos)
+
+Padrao: **empresa → RT → (ambulancias | funcionarios)**. Generalizavel pra qualquer app que tenha "uma organizacao com varios responsaveis/filiais/gerentes, cada um dono de seus proprios recursos".
+
+```javascript
+// Schema: entidade aponta pro sub-owner via campo `rt` (ou `managerId`, `filialId`, etc)
+{ id:'a_xyz', prefixo:'SA-01', rt:'u_rt1', ... }       // ambulancia do RT
+{ id:'u_xyz', nome:'Carlos',  role:'Condutor', rt:'u_rt1' }  // funcionario do RT
+
+// Scoping automatico: se quem loga e sub-owner, filtra tudo por ele
+function getScopedAmbs(){
+  const all = getAmbs();
+  if(CU.role === 'Administrador' || CU.role === 'superadmin') return all;
+  if(CU.role === 'RT') return all.filter(a => a.rt === CU.id);
+  // Funcionario ve so onde esta na equipe
+  return all.filter(a => (a.equipe||[]).some(e => e.userId === CU.id));
+}
+```
+
+**Chave:** mesma funcao `getScoped*()` aplicada em TODOS os renderizadores. Nenhum `render*` chama `getAll*` direto.
+
+**Admin** tambem ganha um dropdown "Filtrar por RT" pra simular a visao de cada sub-owner — essencial pra debug e suporte.
+
+### 11.2 Constante enum com metadata (evita `if/else` espalhados)
+
+Padrao: valores "enum-like" que precisam de icone, cor, label, etc.
+
+```javascript
+const TIPOS = {
+  ASB: {icon:'🚑', cor:'#22C55E', label:'Suporte Basico',    equipe:['Condutor','Tecnico']},
+  ASA: {icon:'🚑', cor:'#E02020', label:'Suporte Avancado',  equipe:['Condutor','Enfermeiro','Medico']},
+  UTI: {icon:'🏥', cor:'#7C3AED', label:'UTI Movel',          equipe:['Condutor','Enfermeiro','Medico']},
+};
+
+// Render: um helper unico consome a metadata
+function tipoPill(t){
+  const ti = TIPOS[t];
+  if(!ti) return '<span class="badge">-</span>';
+  return `<span class="badge" style="background:${ti.cor}22;color:${ti.cor};border:1px solid ${ti.cor}44">
+    ${ti.icon} ${t}
+  </span>`;
+}
+```
+
+**Bonus:** o campo `equipe` vira preenchimento automatico de formulario quando o tipo e escolhido.
+
+### 11.3 Gating de formulario (click-to-expand como primeiro passo)
+
+Padrao: em vez de mostrar um formulario de 6 blocos, forcar o usuario a escolher **uma coisa** primeiro (contexto) antes que o resto apareca.
+
+```html
+<!-- Primeiro passo: card grande clicavel -->
+<div class="gate-card" onclick="toggleGate()">
+  <span class="gate-num">1</span>
+  <span class="gate-title" id="gate-title">Selecione X</span>
+  <span class="gate-info" id="gate-info">Clique para abrir</span>
+  <span class="gate-caret">▾</span>
+</div>
+<div class="gate-list" id="gate-list" style="display:none"></div>
+
+<!-- Resto do form — so aparece depois da escolha -->
+<div id="gated-form" style="display:none"> ... </div>
+```
+
+```javascript
+function escolher(itemId){
+  qid('gate-selected').value = itemId;
+  qid('gate-title').textContent = 'Selecionado';
+  qid('gate-info').innerHTML = `<b>${nomeDoItem}</b>`;
+  qid('gate-list').style.display = 'none';
+  qid('gated-form').style.display = 'block';   // <- libera o resto
+}
+```
+
+**Ganhos:** (1) reduz ansiedade visual ao abrir o app, (2) garante que a escolha critica foi feita, (3) permite filtrar opcoes do resto do form baseado na escolha do gate.
+
+**Quando usar:** formularios longos onde uma escolha define o contexto das demais (ex: selecionar cliente antes de fazer pedido, selecionar equipamento antes de checklist).
+
+### 11.4 Visibilidade de campos por papel (nao so de paineis)
+
+Papeis geralmente precisam ver **blocos diferentes do mesmo formulario**, nao so paineis diferentes no menu.
+
+```html
+<!-- Dentro do mesmo card de Identificacao -->
+<div class="card-body">
+  <!-- Comum: todos veem -->
+  <input id="data">
+  <input id="horario">
+
+  <!-- So condutor/admin: envolver em wrapper com id -->
+  <div id="bloco-campos-condutor">
+    <input id="km-inicio">
+    <input id="condutor-nome">
+    <input id="temp-interna">
+  </div>
+
+  <!-- So enfermeiro/admin -->
+  <div id="bloco-campos-enfermeiro" style="display:none">
+    <input id="medicacao-admin">
+  </div>
+</div>
+```
+
+```javascript
+function setupFormByRole(){
+  const role = CU.role;
+  const showCondutor  = role === 'Condutor'  || role === 'RT' || role === 'Administrador';
+  const showEnf       = role === 'Enfermeiro' || role === 'RT' || role === 'Administrador';
+
+  qid('bloco-campos-condutor').style.display  = showCondutor ? '' : 'none';
+  qid('bloco-campos-enfermeiro').style.display = showEnf      ? '' : 'none';
+}
+```
+
+**Impacto na validacao:** campos escondidos NAO devem ser obrigatorios. Checar visibilidade no submit:
+
+```javascript
+const exigeCondutor = qid('bloco-campos-condutor').style.display !== 'none';
+if(exigeCondutor && !qid('km-inicio').value) missing.push('KM');
+```
+
+### 11.5 Lista colapsavel com detalhe por item (+/-)
+
+Padrao: linha principal enxuta, detalhes abrem via botao `+`/`-` na propria linha.
+
+```html
+<div class="item-row">
+  <span>Nome do item</span>
+  <span>Qtd: 3</span>
+  <span>Data: 15/06</span>
+  <button onclick="toggleDetail('item1')" id="btn-item1">+</button>
+</div>
+<div id="detail-item1" style="display:none">
+  <!-- Sub-itens / lotes / variacoes -->
+</div>
+```
+
+```javascript
+function toggleDetail(id){
+  const el = qid('detail-' + id);
+  const btn = qid('btn-' + id);
+  const aberto = el.style.display !== 'none';
+  el.style.display = aberto ? 'none' : 'block';
+  btn.textContent = aberto ? '+' : '−';
+}
+```
+
+**Bonus no AmbuCheck:** clicar no `+` com `qty > 1` e sem detalhes ainda → **auto-cria** detalhes (ex: lote por unidade do estoque) com datas em branco. UX reduzida a um clique.
+
+### 11.6 Filtro inline no header da tabela
+
+Em vez de uma barra de filtros separada, colocar selects direto no header do card. Populacao feita uma unica vez na primeira renderizacao.
+
+```html
+<div class="card-header">
+  <span class="card-title">Usuarios</span>
+  <select id="filtro-rt" onchange="renderUsers()" style="margin-left:auto">
+    <option value="">Todos RTs</option>
+  </select>
+  <button>+ Adicionar</button>
+</div>
+```
+
+```javascript
+function renderUsers(){
+  // Popular filtro so uma vez
+  const sel = qid('filtro-rt');
+  if(sel && sel.options.length <= 1){
+    getRTs().forEach(u => {
+      const o = document.createElement('option');
+      o.value = u.id; o.textContent = u.nome;
+      sel.appendChild(o);
+    });
+  }
+  const filtro = sel?.value || '';
+  let users = getUsers();
+  if(filtro) users = users.filter(u => u.rt === filtro);
+  // render tbody...
+}
+```
+
+### 11.7 Agrupamento visual por categoria dentro de tabela
+
+Padrao: tabela plana fica ruim quando tem 20+ linhas misturando tipos. Agrupar com headers de secao mantem densidade alta sem perder clareza.
+
+```javascript
+function renderAgrupado(users){
+  const grupos = {};
+  users.forEach(u => { (grupos[u.role] = grupos[u.role] || []).push(u); });
+
+  // Ordem fixa de prioridade
+  const ordem = ['Administrador','RT','Enfermeiro','Tecnico','Condutor'];
+  const chaves = Object.keys(grupos).sort((a,b) => {
+    const ia = ordem.indexOf(a), ib = ordem.indexOf(b);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
+
+  tbody.innerHTML = chaves.map(role => {
+    const header = `<tr><td colspan="N" class="group-header">${role} - ${grupos[role].length}</td></tr>`;
+    const rows   = grupos[role].map(u => `<tr>...</tr>`).join('');
+    return header + rows;
+  }).join('');
+}
+```
+
+### 11.8 Mensagem de convite via WhatsApp (formatacao nativa)
+
+Padrao BR: cadastro gera senha provisoria e envia credenciais via WhatsApp. O WhatsApp suporta `*negrito*`, `_italico_`, `~riscado~`, `` `mono` ``.
+
+```javascript
+function gerarConvite(nome, email, senha, role, empresa, url){
+  const primeiroNome = (nome||'').split(' ')[0];
+  return `Prezado(a) ${primeiroNome},
+
+Seu acesso ao *AmbuCheck* foi liberado pela *${empresa}*.
+
+*CREDENCIAIS DE ACESSO*
+Funcao:  ${role}
+E-mail:  ${email}
+Senha:   ${senha}
+
+*LINK DE ACESSO*
+${url}
+
+_Orientacoes:_
+• Acesse em qualquer navegador
+• Altere sua senha no primeiro acesso
+
+Atenciosamente,
+*${empresa}*`;
+}
+
+function abrirWhatsApp(whatsappNumero, mensagem){
+  const num = (whatsappNumero||'').replace(/\D/g,'');
+  const msg = encodeURIComponent(mensagem);
+  const url = num ? `https://wa.me/55${num}?text=${msg}` : `https://wa.me/?text=${msg}`;
+  window.open(url, '_blank');
+}
+```
+
+**Armadilhas aprendidas:**
+- **Evitar emojis em mensagens corporativas** — aparecem como `�` em muitos aparelhos/web. Usar so formatacao nativa (`*`, `_`) e bullets ASCII (`•`).
+- **Usar so primeiro nome** — evita bugs tipo "Olá, EnfJoao!" quando o nome foi digitado errado.
+- **Tom corporate** ("Prezado(a)", "Atenciosamente") em vez de "Olá! 👋" parece muito mais profissional pro usuario final.
+- **`text=` com `encodeURIComponent`** — senao quebra acentos e quebras de linha.
+
+### 11.9 CSS do gating/expandir (reusavel)
+
+```css
+.gate-card{
+  background:#05070B; border:1px solid var(--border); border-radius:12px;
+  padding:18px 22px; cursor:pointer; display:flex; align-items:center; gap:14px;
+  transition:border-color 0.2s, background 0.2s;
+}
+.gate-card:hover{ border-color:var(--primary); }
+.gate-card.selected{ border-color:var(--primary); background:linear-gradient(135deg,#0A0C12,#0F0608); }
+.gate-num{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:30px; height:30px; border-radius:7px;
+  background:var(--primary); color:white; font-weight:700;
+}
+.gate-caret{ font-size:1rem; color:var(--muted); transition:transform 0.2s; }
+.gate-card.open .gate-caret{ transform:rotate(180deg); }
+.gate-list{
+  margin-top:8px; background:var(--dark2); border:1px solid var(--border);
+  border-radius:10px; padding:8px; display:flex; flex-direction:column; gap:4px;
+}
+.gate-opt{
+  padding:12px 14px; border-radius:7px; cursor:pointer;
+  display:flex; align-items:center; gap:10px; border:1px solid transparent;
+}
+.gate-opt:hover{ background:var(--dark3); border-color:var(--border); }
+.gate-opt.active{ background:rgba(224,32,32,0.08); border-color:rgba(224,32,32,0.25); }
+```
+
+### 11.10 Licoes meta do ciclo
+
+- **Codigo orfao e caro.** No AmbuCheck, varias funcoes referenciavam constantes (`TIPOS`, `getEscalas`) e IDs do DOM (`modal-amb-title`, `ma-prefixo`) que nao existiam — provavelmente restos de refatoracao incompleta. Resultado: botoes que nao faziam nada, silenciosamente. **Antes de refatorar, grep do nome da funcao/id. Se tiver referencia sem definicao, corrigir antes de adicionar feature nova.**
+
+- **Scope creep em SaaS e real.** A cada 2-3 features, surgia uma nova dimensao (multi-RT, trial, escala). Uma vez que o app tem **multi-tenant + multi-role + multi-owner + trial/plano**, qualquer feature nova tem que perguntar: "como isso se comporta em cada combinacao?". Sem essa disciplina, bugs se acumulam em silencio.
+
+- **Deploy por arquivo unico + GitHub Pages acelera feedback.** Push → 30s → cliente testa. Sem CI, sem staging. Perfeito pra MVP / beta.
+
+- **localStorage mente.** Pode ter dados de testes antigos com schemas incompatveis. Sempre usar getters que tolerem campos ausentes (`{...i, lotes: i.lotes||[]}`) em vez de assumir shape.
