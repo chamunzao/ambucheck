@@ -821,6 +821,7 @@ tbody td{padding:8px 13px;color:#CDD5E0;vertical-align:middle}
 
     <!-- AMBULÂNCIAS -->
     <div class="panel" id="panel-ambulancias">
+      <div id="amb-orfas-banner" class="alert yellow" style="display:none;margin-bottom:10px"></div>
       <div class="card">
         <div class="ch">
           <div class="ch-icon" style="background:var(--red)">🚑</div>
@@ -1881,7 +1882,28 @@ function renderAmbs(){
 
   // Escopo: RT logado vê só as próprias ambulâncias; Admin pode filtrar
   const filtroRt = (CU && CU.role==='RT') ? CU.id : (selFiltro?.value || '');
-  if(filtroRt) ambs = ambs.filter(a=>a.rt===filtroRt);
+  // Para o RT logado: também conta como "dele" o que ele criou (criadoPor) — recupera ambulâncias antigas sem rt atribuído
+  const ambsTodas = getAmbs();
+  if(filtroRt){
+    if(CU && CU.role==='RT'){
+      ambs = ambsTodas.filter(a => a.rt===CU.id || a.criadoPor===CU.id);
+    } else {
+      ambs = ambsTodas.filter(a=>a.rt===filtroRt);
+    }
+  }
+
+  // Banner de reivindicação para RT que tem ambulâncias órfãs (sem rt) na empresa
+  const orfas = (CU && CU.role==='RT')
+    ? ambsTodas.filter(a => !a.rt && a.criadoPor!==CU.id)
+    : [];
+  const banner = qid('amb-orfas-banner');
+  if(banner){
+    if(orfas.length){
+      banner.style.display='block';
+      banner.innerHTML = `⚠️ Há <b>${orfas.length}</b> ambulância(s) sem RT atribuído na empresa.
+        <button class="btn sm" style="background:var(--yellow);color:var(--dark);margin-left:8px" onclick="reivindicarAmbsOrfas()">Reivindicar como minhas</button>`;
+    } else banner.style.display='none';
+  }
 
   if(!ambs.length){tbody.innerHTML='<tr><td colspan="7" class="empty">Nenhuma ambulância cadastrada.</td></tr>';return}
   tbody.innerHTML=ambs.map(a=>{
@@ -1941,6 +1963,17 @@ function getEquipeFromList(listId){
   }).filter(e=>e.cargo||e.userId);
 }
 
+// Helper: popula select de RT, pré-selecionando o RT logado quando aplicável
+function popularSelectRtAmb(selectedId){
+  const sel=qid('ma-rt'); if(!sel) return;
+  const rtPadrao = (CU && CU.role==='RT') ? CU.id : (selectedId||'');
+  sel.innerHTML='<option value="">Sem RT específico (usa RT da empresa)</option>';
+  getRTs().forEach(u=>{
+    const sel2 = u.id===rtPadrao ? ' selected' : '';
+    sel.innerHTML+=`<option value="${esc(u.id)}"${sel2}>${esc(u.nome)} (${esc(u.role)})</option>`;
+  });
+}
+
 // ── Modal ambulância ──
 function openModalAmb(){
   editAmbId=null;
@@ -1949,9 +1982,7 @@ function openModalAmb(){
   qid('ma-tipo').value=''; qid('ma-tipo-info').style.display='none';
   qid('ma-modelo').value=''; qid('ma-ano').value='';
   qid('ma-equipe-list').innerHTML=''; eqCounter=0;
-  const sel=qid('ma-rt');
-  sel.innerHTML='<option value="">Sem RT específico (usa RT da empresa)</option>';
-  getRTs().forEach(u=>sel.innerHTML+=`<option value="${esc(u.id)}">${esc(u.nome)} (${esc(u.role)})</option>`);
+  popularSelectRtAmb('');
   qid('modal-amb-foot').innerHTML=`<button class="btn red" onclick="saveAmb()">Cadastrar</button><button class="btn ghost" onclick="closeModal('modal-amb')">Cancelar</button>`;
   openModal('modal-amb');
 }
@@ -1965,9 +1996,7 @@ function openEditEquipe(ambId){
   qid('ma-modelo').value=amb.modelo||''; qid('ma-ano').value=amb.ano||'';
   qid('ma-equipe-list').innerHTML=''; eqCounter=0;
   (amb.equipe||[]).forEach(e=>addEqRow('ma-equipe-list',e.cargo,e.userId));
-  const sel=qid('ma-rt');
-  sel.innerHTML='<option value="">Sem RT específico</option>';
-  getRTs().forEach(u=>sel.innerHTML+=`<option value="${esc(u.id)}"${u.id===amb.rt?' selected':''}>${esc(u.nome)} (${esc(u.role)})</option>`);
+  popularSelectRtAmb(amb.rt);
   qid('modal-amb-foot').innerHTML=`<button class="btn red" onclick="saveAmb()">💾 Salvar</button><button class="btn ghost" onclick="closeModal('modal-amb')">Cancelar</button>`;
   openModal('modal-amb');
 }
@@ -1984,13 +2013,15 @@ function saveAmb(){
     if(!st.ok){showToast('⛔ '+st.reason);return;}
   }
   const equipe=getEquipeFromList('ma-equipe-list');
+  // RT logado é sempre o dono das suas ambulâncias — nunca grava `rt` vazio quando o criador é RT
+  const rtFinal = qid('ma-rt').value || (CU.role==='RT' ? CU.id : '');
   const ambs=getAmbs();
   if(editAmbId){
     const idx=ambs.findIndex(a=>a.id===editAmbId);
-    if(idx>=0) ambs[idx]={...ambs[idx],prefixo:pref,placa,tipo,modelo:qid('ma-modelo').value.trim(),ano:qid('ma-ano').value.trim(),rt:qid('ma-rt').value,equipe};
+    if(idx>=0) ambs[idx]={...ambs[idx],prefixo:pref,placa,tipo,modelo:qid('ma-modelo').value.trim(),ano:qid('ma-ano').value.trim(),rt:rtFinal,equipe};
     setAmbs(ambs);showToast(`✅ Ambulância ${pref} atualizada!`);
   } else {
-    ambs.push({id:'a_'+uid(),prefixo:pref,placa,tipo,modelo:qid('ma-modelo').value.trim(),ano:qid('ma-ano').value.trim(),rt:qid('ma-rt').value,status:'Ativo',criado:nowStr(),equipe});
+    ambs.push({id:'a_'+uid(),prefixo:pref,placa,tipo,modelo:qid('ma-modelo').value.trim(),ano:qid('ma-ano').value.trim(),rt:rtFinal,status:'Ativo',criado:nowStr(),criadoPor:CU.id,equipe});
     setAmbs(ambs);showToast(`✅ Ambulância ${pref} (${tipo}) cadastrada!`);
   }
   closeModal('modal-amb'); buildAmbRadios(); renderAmbs(); buildEscAmbSelect();
@@ -2011,6 +2042,18 @@ function salvarRtAmb(){
   const ambs=getAmbs(), idx=ambs.findIndex(a=>a.id===editRtAmbId);
   if(idx>=0){ambs[idx].rt=qid('set-rt-sel').value; setAmbs(ambs)}
   closeModal('modal-set-rt'); renderAmbs(); showToast('✅ RT da ambulância atualizado!');
+}
+
+function reivindicarAmbsOrfas(){
+  if(!CU || CU.role!=='RT'){return}
+  const ambs=getAmbs();
+  const orfas=ambs.filter(a => !a.rt);
+  if(!orfas.length){showToast('Nenhuma ambulância órfã encontrada.');return}
+  if(!confirm(`Reivindicar ${orfas.length} ambulância(s) sem RT como suas?`)) return;
+  orfas.forEach(a => { a.rt = CU.id; });
+  setAmbs(ambs);
+  renderAmbs(); buildAmbRadios();
+  showToast(`✅ ${orfas.length} ambulância(s) agora estão sob seu RT.`);
 }
 
 // ═══════ ESCALA POR AMBULÂNCIA ═══════
