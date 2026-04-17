@@ -1006,6 +1006,30 @@ tbody td{padding:8px 13px;color:#CDD5E0;vertical-align:middle}
 </div>
 </div>
 
+<!-- MODAL SOLICITAR VÍNCULO -->
+<div class="modal-ov" id="modal-solicitar-vinculo">
+<div class="modal-box">
+  <h3>Solicitar vínculo a ambulância</h3>
+  <div style="background:var(--dark2);border:1px solid var(--border);border-radius:8px;padding:10px 13px;font-size:0.8rem;color:var(--muted);margin-bottom:14px">
+    Seu pedido vai para o RT da ambulância escolhida. Quando aprovado, você passa a ver a ambulância no checklist.
+  </div>
+  <div class="af"><label>Ambulância desejada *</label>
+    <select class="fi" id="sv-amb"><option value="">Selecione...</option></select>
+  </div>
+  <div class="af"><label>Seu cargo</label>
+    <input type="text" class="fi" id="sv-cargo" readonly>
+    <span style="font-size:0.7rem;color:var(--muted)">Baseado na sua função cadastrada.</span>
+  </div>
+  <div class="af"><label>Justificativa (opcional)</label>
+    <textarea class="fta" id="sv-just" placeholder="Ex: fui escalado para esta ambulância a partir desta semana..."></textarea>
+  </div>
+  <div class="modal-foot">
+    <button class="btn blue" onclick="submitSolicitarVinculo()">Enviar pedido ao RT</button>
+    <button class="btn ghost" onclick="closeModal('modal-solicitar-vinculo')">Cancelar</button>
+  </div>
+</div>
+</div>
+
 <!-- MODAL ESCALA POR AMBULÂNCIA -->
 <div class="modal-ov" id="modal-escala-amb">
 <div class="modal-box" style="max-width:640px">
@@ -1784,7 +1808,15 @@ function renderAmbSelector(){
   const list=qid('amb-sel-list'); if(!list) return;
   const ambs=getAmbsDoUsuario();
   if(!ambs.length){
-    list.innerHTML=`<div class="amb-sel-empty">Você ainda não está inscrito em nenhuma ambulância.<br><span style="font-size:0.76rem;color:var(--muted2)">Peça ao seu RT para incluir você na equipe fixa.</span></div>`;
+    const todasDaEmpresa = getAmbs();
+    const btnSolicitar = todasDaEmpresa.length
+      ? `<button class="btn blue sm" style="margin-top:10px" onclick="abrirSolicitarVinculo()">+ Solicitar vínculo a uma ambulância</button>`
+      : '';
+    list.innerHTML=`<div class="amb-sel-empty">
+      Você ainda não está vinculado a nenhuma ambulância.<br>
+      <span style="font-size:0.76rem;color:var(--muted2)">O RT precisa aprovar o vínculo antes de você poder fazer checklists.</span>
+      <br>${btnSolicitar}
+    </div>`;
     return;
   }
   const selectedId=qid('amb-selected-id')?.value||'';
@@ -2242,17 +2274,20 @@ function renderAprovacoes(){
   const pel=qid('aprv-pending');
   if(!pending.length){pel.innerHTML='<span style="color:var(--muted);font-size:0.83rem">Nenhuma sugestão pendente ✅</span>'}
   else{
-    pel.innerHTML=pending.map(s=>`
-      <div class="aprv-card">
+    pel.innerHTML=pending.map(s=>{
+      const tipoLabel = s.tipo==='vinculo' ? '🔗 Vínculo' : s.tipo;
+      const tipoCls   = s.tipo==='vinculo' ? 'b-pu' : 'b-info';
+      return `<div class="aprv-card">
         <div class="aprv-meta">
           <span class="aprv-name">${esc(s.nome)}</span>
           <span class="badge b-ye">${esc(s.categoria)}</span>
-          <span class="badge b-info">${esc(s.tipo)}</span>
+          <span class="badge ${tipoCls}">${esc(tipoLabel)}</span>
           <span style="font-size:0.73rem;color:var(--muted);margin-left:auto">por ${esc(s.solicitante)} · ${esc(s.dtSolicitacao)}</span>
         </div>
         <div class="aprv-desc">📝 ${esc(s.justificativa)}</div>
         <div style="display:flex;gap:8px"><button class="btn sm" style="background:#92400E;color:var(--yellow)" onclick="abrirAprv('${esc(s.id)}')">Revisar →</button></div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   }
   const hel=qid('aprv-hist-tb');
   if(!hist.length){hel.innerHTML='<tr><td colspan="5" class="empty">Sem histórico.</td></tr>';return}
@@ -2297,10 +2332,67 @@ function decidir(aprovar){
       const extras=getExtras();
       if(!extras.find(e=>e.nome===sug.nome)){extras.push({id:'ext_'+uid(),nome:sug.nome,categoria:sug.categoria,tipo:sug.tipo});setExtras(extras);renderExtraItems()}
     }
+    // Vínculo de profissional a ambulância
+    if(sug.tipo==='vinculo' && sug.ambId && sug.solicitanteId){
+      const ambs=getAmbs(), idx=ambs.findIndex(a=>a.id===sug.ambId);
+      if(idx>=0){
+        ambs[idx].equipe = ambs[idx].equipe || [];
+        const jaTem = ambs[idx].equipe.some(e => e.userId===sug.solicitanteId && e.cargo===sug.cargo);
+        if(!jaTem){
+          ambs[idx].equipe.push({cargo:sug.cargo||'', userId:sug.solicitanteId});
+          setAmbs(ambs);
+          buildAmbRadios(); renderAmbs();
+        }
+      }
+    }
   }
   closeModal('modal-aprv');
   renderAprovacoes(); renderStock(); refreshBadge();
   showToast(aprovar?`✅ "${sug.nome}" aprovado!`:`❌ "${sug.nome}" rejeitado.`);
+}
+
+// ═══════ VÍNCULO DE PROFISSIONAL A AMBULÂNCIA ═══════
+function abrirSolicitarVinculo(){
+  const sel=qid('sv-amb');
+  const ambs=getAmbs();
+  // Excluir as em que já é membro ou tem pedido pendente
+  const meusPendentes = getSugs().filter(s => s.tipo==='vinculo' && s.solicitanteId===CU.id && s.status==='pendente').map(s=>s.ambId);
+  const ambsMinhas = ambs.filter(a => (a.equipe||[]).some(e => e.userId===CU.id)).map(a=>a.id);
+  const disponiveis = ambs.filter(a => !ambsMinhas.includes(a.id) && !meusPendentes.includes(a.id));
+  sel.innerHTML = disponiveis.length
+    ? '<option value="">Selecione...</option>' + disponiveis.map(a=>{
+        const ti=TIPOS[a.tipo]||{icon:'🚑'};
+        return `<option value="${esc(a.id)}">${ti.icon} ${esc(a.prefixo)} (${esc(a.placa)})</option>`;
+      }).join('')
+    : '<option value="">Nenhuma ambulância disponível para pedido</option>';
+  qid('sv-cargo').value = CU.role || '';
+  qid('sv-just').value = '';
+  openModal('modal-solicitar-vinculo');
+}
+
+function submitSolicitarVinculo(){
+  if(!lockSubmit('vinculo',3000)){showToast('⏳ Aguarde...');return}
+  const ambId = qid('sv-amb').value;
+  if(!ambId){showToast('❌ Selecione uma ambulância.');return}
+  const amb = getAmb(ambId); if(!amb){showToast('❌ Ambulância inválida.');return}
+  const cargo = qid('sv-cargo').value;
+  const just = qid('sv-just').value.trim();
+  const sug = {
+    id:'SUG-'+uid(),
+    tipo:'vinculo',
+    categoria:'Vínculo de Profissional',
+    nome: `${cargo} em ${amb.prefixo} (${amb.placa})`,
+    ambId, cargo,
+    justificativa: just || `Solicito vínculo à ambulância ${amb.prefixo} como ${cargo}.`,
+    solicitante: CU.nome, solicitanteId: CU.id,
+    status:'pendente',
+    dtSolicitacao: nowStr(),
+    obsRT:''
+  };
+  const sugs=getSugs(); sugs.unshift(sug); setSugs(sugs);
+  closeModal('modal-solicitar-vinculo');
+  renderSugs(); refreshBadge(); renderAmbSelector();
+  showToast('✅ Pedido enviado ao RT.');
 }
 
 // ═══════ ALTERAÇÕES ═══════
